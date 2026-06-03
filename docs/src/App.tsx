@@ -1,99 +1,124 @@
 import { motion, type Variants } from 'framer-motion';
-import { Share2, Zap, Shield, Globe2, ArrowRight, Download } from 'lucide-react';
+import { Share2, Zap, Shield, ArrowRight, Download, MonitorSmartphone, WifiOff, Rocket, CheckCircle2 } from 'lucide-react';
 import './index.css';
 
 export default function App() {
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
-      transition: { staggerChildren: 0.2 }
+      transition: { staggerChildren: 0.15, delayChildren: 0.1 }
     }
   };
 
   const itemVariants: Variants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: { y: 30, opacity: 0 },
     visible: { 
       y: 0, 
       opacity: 1,
-      transition: { type: 'spring', stiffness: 100 }
+      transition: { type: 'spring', stiffness: 80, damping: 20 }
     }
   };
 
   return (
-    <div className="min-h-screen bg-tp-base text-tp-text selection:bg-tp-primary/30">
+    <div className="min-h-screen bg-tp-base text-tp-text selection:bg-tp-primary/30 relative overflow-hidden">
+      {/* Aurora Background */}
+      <div className="aurora-bg"></div>
+      
+      {/* Subtle Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoNSwgMTUwLCAxMDUsIDAu০৮KSIvPjwvc3ZnPg==')] opacity-40 z-0 pointer-events-none" />
+
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-tp-primary/10 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-tp-primary to-tp-secondary flex items-center justify-center shadow-lg shadow-tp-primary/20">
-              <Share2 size={24} className="text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-tp-primary via-tp-secondary to-tp-accent flex items-center justify-center shadow-lg shadow-tp-primary/30 p-0.5">
+              <div className="w-full h-full bg-tp-surface rounded-[14px] flex items-center justify-center">
+                <Share2 size={24} className="text-tp-primary" />
+              </div>
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">TichPhong Share</span>
+            <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-tp-primary to-tp-accent">TichPhong Share</span>
           </div>
-          <a href="#download" className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all font-medium text-sm border border-white/5 flex items-center gap-2">
-            <Download size={16} />
-            Tải Ngay
+          <a href="#download" className="px-6 py-2.5 rounded-full bg-gradient-to-r from-tp-primary to-tp-secondary text-white hover:shadow-xl hover:shadow-tp-primary/30 transition-all font-bold text-sm flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+            <Download size={18} className="relative z-10" />
+            <span className="relative z-10">Tải Ngay</span>
           </a>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <main className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-tp-primary/20 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-tp-secondary/20 blur-[100px] rounded-full pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
+      <main className="relative pt-40 pb-24 z-10">
+        <div className="max-w-7xl mx-auto px-6">
           <motion.div 
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="text-center max-w-4xl mx-auto mt-20"
+            className="text-center max-w-5xl mx-auto flex flex-col items-center"
           >
-            <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-tp-secondary/10 border border-tp-secondary/20 text-tp-secondary text-sm font-semibold mb-8">
-              <Zap size={16} />
-              <span>Giao thức LocalSend & Quick Share</span>
+            <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass-card text-tp-primary font-bold text-sm mb-10 border-tp-primary/20 hover:border-tp-primary/40 transition-colors">
+              <Rocket size={18} className="animate-pulse" />
+              <span className="uppercase tracking-wider text-xs">Thế Hệ Mới Của Chia Sẻ Dữ Liệu</span>
             </motion.div>
             
-            <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-8 leading-[1.1]">
-              Chia sẻ dữ liệu{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-tp-primary to-tp-secondary">
-                Không giới hạn.
+            <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-black tracking-tighter text-tp-text mb-8 leading-[1.05]">
+              Vượt qua mọi <br className="hidden md:block"/>
+              <span className="text-gradient drop-shadow-sm">
+                giới hạn truyền tải
               </span>
             </motion.h1>
             
-            <motion.p variants={itemVariants} className="text-xl text-tp-subtext mb-12 max-w-2xl mx-auto leading-relaxed">
-              Ứng dụng truyền tải file đa nền tảng mã nguồn mở, siêu tốc độ. Gửi tệp, thư mục và văn bản giữa các thiết bị mà không cần internet.
+            <motion.p variants={itemVariants} className="text-xl md:text-2xl text-tp-subtext mb-12 max-w-3xl mx-auto leading-relaxed font-medium opacity-90">
+              Chia sẻ tệp tin, hình ảnh và văn bản tốc độ cao giữa mọi thiết bị. <br className="hidden md:block"/> 
+              <span className="text-tp-primary font-semibold">Bảo mật tuyệt đối. Không cần internet.</span>
             </motion.p>
             
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a href="#download" className="px-8 py-4 rounded-2xl bg-tp-primary hover:bg-pink-600 text-white font-semibold transition-all shadow-lg shadow-tp-primary/25 flex items-center gap-2 w-full sm:w-auto justify-center">
-                <Download size={20} />
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full sm:w-auto">
+              <a href="#download" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-tp-text text-white font-bold text-lg hover:bg-tp-text/90 transition-all shadow-2xl shadow-tp-text/20 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 glow-button">
+                <Download size={24} />
                 Tải cho Linux
               </a>
-              <a href="https://github.com/doccosau/TichPhong-Share" target="_blank" rel="noopener noreferrer" className="px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-medium transition-all border border-white/10 flex items-center gap-2 w-full sm:w-auto justify-center">
-                Mã nguồn GitHub
-                <ArrowRight size={20} />
+              <a href="https://github.com/doccosau/TichPhong-Share" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto px-10 py-5 rounded-2xl glass-card text-tp-text font-bold text-lg hover:border-tp-primary/50 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 group">
+                Xem mã nguồn
+                <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
               </a>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="mt-12 flex items-center gap-6 text-sm font-semibold text-tp-subtext/80">
+               <div className="flex items-center gap-2"><CheckCircle2 size={18} className="text-tp-primary"/> Mã nguồn mở</div>
+               <div className="flex items-center gap-2"><CheckCircle2 size={18} className="text-tp-primary"/> Đa nền tảng</div>
+               <div className="flex items-center gap-2"><CheckCircle2 size={18} className="text-tp-primary"/> Miễn phí</div>
             </motion.div>
           </motion.div>
 
           {/* App Preview Mockup */}
           <motion.div 
-            initial={{ y: 100, opacity: 0 }}
+            initial={{ y: 120, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6, type: "spring", stiffness: 60 }}
-            className="mt-24 relative max-w-5xl mx-auto"
+            transition={{ delay: 0.8, type: "spring", stiffness: 50, damping: 20 }}
+            className="mt-28 relative max-w-5xl mx-auto animate-float z-20"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-tp-base via-transparent to-transparent z-20" />
-            <div className="glass-card rounded-[2rem] p-4 border border-white/10 overflow-hidden shadow-2xl relative z-10">
-              <div className="bg-tp-surface rounded-[1.5rem] overflow-hidden aspect-[16/10] relative flex items-center justify-center">
+            {/* Glowing backdrop for the mockup */}
+            <div className="absolute inset-0 bg-gradient-to-r from-tp-primary to-tp-accent opacity-20 blur-[100px] rounded-[3rem] -z-10" />
+            
+            <div className="glass-card rounded-[2.5rem] p-4 md:p-6 border border-white/60 shadow-[0_30px_60px_-15px_rgba(5,150,105,0.3)] relative overflow-hidden group">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-2 bg-white/40 rounded-b-xl blur-[1px]"></div>
+              
+              <div className="bg-tp-surface rounded-[2rem] overflow-hidden aspect-[16/10] relative flex items-center justify-center shadow-inner">
                 <img 
                   src="/screenshots/app-ui-1.png" 
                   alt="TichPhong Share Interface" 
-                  className="w-full h-full object-cover rounded-[1.5rem]"
+                  className="w-full h-full object-cover transform group-hover:scale-[1.02] transition-transform duration-700 ease-out"
                 />
+                
+                {/* Decorative UI elements overlay */}
+                <div className="absolute top-6 left-6 glass-card px-4 py-2 rounded-xl flex items-center gap-3 animate-float-delayed">
+                   <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-600"><CheckCircle2 size={20}/></div>
+                   <div>
+                     <div className="text-xs font-bold text-tp-text">Đã nhận file</div>
+                     <div className="text-[10px] text-tp-subtext">Video_du_lich.mp4 (2.4 GB)</div>
+                   </div>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -101,32 +126,35 @@ export default function App() {
       </main>
 
       {/* Features Grid */}
-      <section className="py-24 relative">
+      <section className="py-32 relative z-10 bg-gradient-to-b from-transparent to-white/50">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Được thiết kế để tối ưu trải nghiệm</h2>
-            <p className="text-lg text-tp-subtext max-w-2xl mx-auto">Không cần thiết lập rườm rà. Chỉ cần mở ứng dụng là có thể gửi và nhận file tức thì với mọi thiết bị trong mạng.</p>
+          <div className="text-center mb-20 relative z-10">
+            <h2 className="text-4xl md:text-6xl font-black text-tp-text mb-6 tracking-tight">Tối ưu cho <span className="text-gradient">trải nghiệm</span></h2>
+            <p className="text-xl text-tp-subtext max-w-2xl mx-auto font-medium">Được thiết kế tỉ mỉ để việc chia sẻ dữ liệu trở nên tự nhiên và dễ dàng nhất có thể.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: Zap, title: 'Siêu Tốc Độ', desc: 'Sử dụng toàn bộ băng thông mạng LAN của bạn. Nhanh hơn gấp nhiều lần so với Bluetooth hay chia sẻ qua Cloud.' },
-              { icon: Globe2, title: 'Đa Nền Tảng', desc: 'Tương thích hoàn hảo với Android (LocalSend/Quick Share), Windows, macOS, iOS và Linux.' },
-              { icon: Shield, title: 'An Toàn Tuyệt Đối', desc: 'Truyền tải mã hóa P2P nội bộ. Không đi qua máy chủ trung gian. Dữ liệu của bạn không bao giờ rời khỏi mạng LAN.' }
+              { icon: Zap, title: 'Tốc Độ Ánh Sáng', desc: 'Khai thác tối đa băng thông router mạng LAN của bạn. Chuyển tệp tin hàng Gigabyte chỉ trong vài giây.' },
+              { icon: MonitorSmartphone, title: 'Hỗ Trợ Mọi Thiết Bị', desc: 'Windows, macOS, Linux, Android hay iOS. TichPhong Share kết nối tất cả chúng lại với nhau.' },
+              { icon: WifiOff, title: 'Hoạt Động Offline', desc: 'Không cần kết nối Internet. Chỉ cần các thiết bị ở chung một mạng Wi-Fi hoặc mạng LAN.' },
+              { icon: Shield, title: 'Bảo Mật Cục Bộ', desc: 'Mã hóa đầu cuối vững chắc. Dữ liệu truyền trực tiếp giữa 2 thiết bị, không lưu trữ trên máy chủ đám mây.' },
+              { icon: Share2, title: 'Giao Thức Tiêu Chuẩn', desc: 'Hoàn toàn tương thích với giao thức LocalSend và Android Quick Share (Sắp ra mắt).' },
+              { icon: Rocket, title: 'Giao Diện Hiện Đại', desc: 'Thiết kế trực quan, mượt mà và hỗ trợ Dark Mode. Tối giản nhưng vô cùng mạnh mẽ.' }
             ].map((feature, i) => (
               <motion.div 
                 key={i}
-                initial={{ y: 30, opacity: 0 }}
+                initial={{ y: 50, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="glass-card p-8 rounded-3xl"
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ delay: i * 0.1, type: "spring", stiffness: 50 }}
+                className="glass-card p-10 rounded-[2rem] group"
               >
-                <div className="w-14 h-14 bg-tp-primary/10 rounded-2xl flex items-center justify-center mb-6 text-tp-primary">
-                  <feature.icon size={28} />
+                <div className="w-16 h-16 bg-gradient-to-br from-tp-primary/10 to-tp-accent/10 border border-white/50 shadow-inner rounded-2xl flex items-center justify-center mb-8 text-tp-primary group-hover:scale-110 transition-transform duration-300 group-hover:shadow-[0_0_20px_rgba(5,150,105,0.3)]">
+                  <feature.icon size={32} />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-4">{feature.title}</h3>
-                <p className="text-tp-subtext leading-relaxed">{feature.desc}</p>
+                <h3 className="text-2xl font-black text-tp-text mb-4 tracking-tight">{feature.title}</h3>
+                <p className="text-tp-subtext leading-relaxed font-medium">{feature.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -134,15 +162,17 @@ export default function App() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12 mt-12 bg-tp-overlay/50">
+      <footer className="border-t border-tp-primary/10 pt-20 pb-12 glass relative z-10 mt-20">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-6">
-             <Share2 size={24} className="text-tp-primary" />
-             <span className="text-xl font-bold text-white">TichPhong Share</span>
+          <div className="flex items-center justify-center gap-3 mb-8">
+             <div className="w-10 h-10 rounded-xl bg-tp-primary flex items-center justify-center shadow-lg shadow-tp-primary/20">
+                <Share2 size={20} className="text-white" />
+             </div>
+             <span className="text-2xl font-black text-tp-text tracking-tight">TichPhong Share</span>
           </div>
-          <p className="text-tp-subtext mb-6">Xây dựng với ❤️ bởi đội ngũ TichPhong OS</p>
-          <div className="text-sm text-tp-subtext/60">
-            © 2026 TichPhong OS. Đã đăng ký bản quyền.
+          <p className="text-tp-subtext font-medium text-lg mb-8 max-w-md mx-auto">Phần mềm mã nguồn mở miễn phí, phát triển bởi cộng đồng TichPhong OS.</p>
+          <div className="text-sm font-semibold text-tp-subtext/60">
+            © {new Date().getFullYear()} TichPhong OS.
           </div>
         </div>
       </footer>
