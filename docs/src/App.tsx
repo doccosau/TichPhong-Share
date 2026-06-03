@@ -1,5 +1,5 @@
 import { motion, type Variants } from 'framer-motion';
-import { Share2, Zap, Shield, ArrowRight, Download, MonitorSmartphone, WifiOff, Rocket, CheckCircle2 } from 'lucide-react';
+import { Share2, Zap, Shield, ArrowRight, Download, MonitorSmartphone, WifiOff, Rocket, CheckCircle2, Monitor, Terminal } from 'lucide-react';
 import './index.css';
 
 export default function App() {
@@ -39,7 +39,7 @@ export default function App() {
             </div>
             <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-tp-primary to-tp-accent">TichPhong Share</span>
           </div>
-          <a href="#download" className="px-6 py-2.5 rounded-full bg-gradient-to-r from-tp-primary to-tp-secondary text-white hover:shadow-xl hover:shadow-tp-primary/30 transition-all font-bold text-sm flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0 relative overflow-hidden group">
+          <a href="https://github.com/doccosau/TichPhong-Share/releases/latest" target="_blank" rel="noopener noreferrer" className="px-6 py-2.5 rounded-full bg-gradient-to-r from-tp-primary to-tp-secondary text-white hover:shadow-xl hover:shadow-tp-primary/30 transition-all font-bold text-sm flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0 relative overflow-hidden group">
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
             <Download size={18} className="relative z-10" />
             <span className="relative z-10">Tải Ngay</span>
@@ -73,14 +73,22 @@ export default function App() {
               <span className="text-tp-primary font-semibold">Bảo mật tuyệt đối. Không cần internet.</span>
             </motion.p>
             
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full sm:w-auto">
-              <a href="#download" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-tp-text text-white font-bold text-lg hover:bg-tp-text/90 transition-all shadow-2xl shadow-tp-text/20 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 glow-button">
-                <Download size={24} />
-                Tải cho Linux
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+              <a href="https://github.com/doccosau/TichPhong-Share/releases/latest" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-tp-text text-white font-bold text-lg hover:bg-tp-text/90 transition-all shadow-xl shadow-tp-text/20 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 glow-button">
+                <Monitor size={22} />
+                Tải cho Windows
               </a>
-              <a href="https://github.com/doccosau/TichPhong-Share" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto px-10 py-5 rounded-2xl glass-card text-tp-text font-bold text-lg hover:border-tp-primary/50 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 group">
-                Xem mã nguồn
-                <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
+              <a href="https://github.com/doccosau/TichPhong-Share/releases/latest" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-tp-primary to-tp-secondary text-white font-bold text-lg hover:shadow-xl hover:shadow-tp-primary/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+                <Terminal size={22} className="relative z-10" />
+                <span className="relative z-10">Tải cho Linux</span>
+              </a>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="mt-8 flex justify-center">
+              <a href="https://github.com/doccosau/TichPhong-Share" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-tp-subtext hover:text-tp-primary transition-colors font-semibold group">
+                Xem mã nguồn trên GitHub
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </a>
             </motion.div>
 
