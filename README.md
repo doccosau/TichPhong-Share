@@ -4,7 +4,12 @@
 
 TichPhong Share is an ultra-fast, open-source file sharing application built with **Tauri v2** and **React**. The app is cross-platform and deeply integrated into the **TichPhong OS** ecosystem, allowing seamless file sharing via **LocalSend**, **Quick Share (Nearby Connections)**, and **WebDAV**.
 
-![TichPhong Share Interface](screenshots/app-ui-1.png)
+<p align="center">
+  <img src="screenshots/app-ui-1.png" width="48%" alt="Send File" />
+  <img src="screenshots/app-ui-2.png" width="48%" alt="Receive File" />
+  <br/>
+  <img src="screenshots/app-ui-3.png" width="60%" alt="Device Portal" />
+</p>
 
 ## ✨ Key Features
 
@@ -77,7 +82,12 @@ This project uses and references the following open-source resources:
 
 TichPhong Share là một ứng dụng chia sẻ tệp mã nguồn mở siêu tốc, được xây dựng với **Tauri v2** và **React**. Ứng dụng hỗ trợ đa nền tảng và tích hợp sâu với hệ sinh thái **TichPhong OS**, cho phép chia sẻ file dễ dàng qua **LocalSend**, **Quick Share (Nearby Connections)** và **WebDAV**.
 
-![Giao diện TichPhong Share](screenshots/app-ui-2.png)
+<p align="center">
+  <img src="screenshots/app-ui-1.png" width="48%" alt="Gửi File" />
+  <img src="screenshots/app-ui-2.png" width="48%" alt="Nhận File" />
+  <br/>
+  <img src="screenshots/app-ui-3.png" width="60%" alt="Device Portal" />
+</p>
 
 ## ✨ Tính năng nổi bật
 
