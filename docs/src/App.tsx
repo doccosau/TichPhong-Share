@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
-import { Share2, Zap, Shield, Globe2, ArrowRight, Download, Laptop, Smartphone } from 'lucide-react';
+import { motion, type Variants } from 'framer-motion';
+import { Share2, Zap, Shield, Globe2, ArrowRight, Download } from 'lucide-react';
 import './index.css';
 
 export default function App() {
@@ -11,7 +11,7 @@ export default function App() {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { y: 20, opacity: 0 },
     visible: { 
       y: 0, 
