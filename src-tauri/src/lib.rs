@@ -314,7 +314,10 @@ async fn start_webshare(
         if let Some(file_name) = path.file_name() {
             let file_name_str = file_name.to_string_lossy().to_string();
             let dest_path = temp_dir.join(&file_name_str);
+            #[cfg(unix)]
             let _ = std::os::unix::fs::symlink(&file_path, &dest_path);
+            #[cfg(windows)]
+            let _ = std::fs::copy(&file_path, &dest_path);
 
             html.push_str(&format!(
                 "<a class='file' href='/files/{}' download>{}</a>",

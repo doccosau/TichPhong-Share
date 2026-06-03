@@ -143,7 +143,7 @@ impl MDnsServer {
         _device_type: DeviceType,
     ) -> Result<ServiceInfo, anyhow::Error> {
         let name = gen_mdns_name(endpoint_id);
-        let hostname = sys_metrics::host::get_hostname()?;
+        let hostname = hostname::get().map(|h| h.to_string_lossy().to_string()).map_err(|e| anyhow::anyhow!(e))?;
         info!("Broadcasting with: {hostname}");
 
         use base64::Engine;

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::os::unix::fs::FileExt;
+use std::io::{Seek, SeekFrom, Write};
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -652,11 +652,12 @@ impl InboundRequest {
                         }
 
                         if !chunk.body().is_empty() {
-                            file_internal
+                            let file_ref = file_internal
                                 .file
-                                .as_ref()
-                                .unwrap()
-                                .write_all_at(chunk.body(), current_offset as u64)?;
+                                .as_mut()
+                                .unwrap();
+                            file_ref.seek(SeekFrom::Start(current_offset as u64))?;
+                            file_ref.write_all(chunk.body())?;
                             file_internal.bytes_transferred += chunk_size as i64;
 
                             self.update_state(

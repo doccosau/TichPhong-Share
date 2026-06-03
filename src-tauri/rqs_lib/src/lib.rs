@@ -142,7 +142,7 @@ impl RQS {
         tracker.spawn(async move { server.run(ctk).await });
 
         let hostname =
-            sys_metrics::host::get_hostname().unwrap_or_else(|_| "TichPhongOS".to_string());
+            hostname::get().map(|h| h.to_string_lossy().to_string()).unwrap_or_else(|_| "TichPhongOS".to_string());
         let endpoint_info_raw =
             crate::utils::gen_endpoint_info(crate::utils::DeviceType::Laptop as u8, &hostname);
 
