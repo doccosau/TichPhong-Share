@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@theme {
+  --color-tichphong-blue: var(--tp-accent);
+  --color-tichphong-blue-hover: var(--tp-accent-hover);
+  --color-tichphong-dark: var(--tp-bg);
+  --color-tichphong-surface: var(--tp-surface);
+  --color-tichphong-border: var(--tp-border);
+  --color-tichphong-text: var(--tp-text);
+  --color-tichphong-text-muted: var(--tp-text-muted);
+}
+
+:root {
+  font-family: "Inter", "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tp-accent: #2dd4bf;
+  --tp-accent-hover: #14b8a6;
+  --tp-bg: #242424;
+  --tp-surface: #303030;
+  --tp-border: rgba(255, 255, 255, 0.1);
+  --tp-text: #ffffff;
+  --tp-text-muted: #9ca3af;
+}
+
+.accent-jade { --tp-accent: #059669; --tp-accent-hover: #047857; }
+.accent-mystic { --tp-accent: #2dd4bf; --tp-accent-hover: #14b8a6; }
+.accent-cinnabar { --tp-accent: #dc2626; --tp-accent-hover: #b91c1c; }
+.accent-purple { --tp-accent: #a78bfa; --tp-accent-hover: #8b5cf6; }
+.accent-tet { --tp-accent: #eab308; --tp-accent-hover: #ca8a04; }
+.accent-zen { --tp-accent: #a8a29e; --tp-accent-hover: #78716c; }
+
+.theme-light {
+  --tp-bg: #f8f9fa;
+  --tp-surface: #ffffff;
+  --tp-border: rgba(0, 0, 0, 0.1);
+  --tp-text: #1f2937;
+  --tp-text-muted: #4b5563;
+}
+
+.theme-dark {
+  --tp-bg: #242424;
+  --tp-surface: #303030;
+  --tp-border: rgba(255, 255, 255, 0.1);
+  --tp-text: #ffffff;
+  --tp-text-muted: #9ca3af;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  background-color: var(--color-tichphong-dark);
+  background-image: 
+    radial-gradient(circle at top right, color-mix(in srgb, var(--tp-accent, #2dd4bf) 15%, transparent), transparent 60%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--tp-accent, #2dd4bf) 5%, transparent), transparent 60%);
+}
+
+.glass-panel {
+  background: rgba(48, 48, 48, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: white;
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: var(--color-tichphong-blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tp-accent, #2dd4bf) 30%, transparent);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "TichPhong Share",
+  "version": "1.0.0",
+  "identifier": "vn.tichphong.share",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "TichPhong Share",
+        "width": 800,
+        "height": 650,
+        "decorations": false,
+        "transparent": false,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "nsis", "msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "TichPhongOS Team",
+    "shortDescription": "Ứng dụng chia sẻ file nhanh chóng đa nền tảng cho TichPhongOS",
+    "longDescription": "TichPhong Share là một ứng dụng chia sẻ file đa nền tảng (PC, Mobile) bảo mật, nhanh chóng dựa trên giao thức Quick Share và LocalSend.",
+    "category": "Utility"
+  }
+}
