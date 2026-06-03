@@ -1477,7 +1477,7 @@ function App() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
-                className="absolute bottom-4 left-4 right-4 bg-gray-900 border border-gray-700 p-4 rounded-xl shadow-2xl z-50 flex flex-col gap-3"
+                className="absolute bottom-4 left-4 right-4 bg-tichphong-surface border border-tichphong-border p-4 rounded-xl shadow-2xl z-50 flex flex-col gap-3 backdrop-blur-xl"
               >
                 {/* Header */}
                 <div className="flex items-center gap-3">
@@ -1489,13 +1489,13 @@ function App() {
                     {qsTransfer.rtype === "Outbound" ? <Send size={20} /> : <Smartphone size={20} />}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-white">
+                    <h3 className="font-semibold text-[color:var(--color-white)]">
                       {qsTransfer.rtype === "Outbound" 
                         ? `${t("Gửi Quick Share đến", "Sending via Quick Share to")} ${qsTransfer.meta?.source?.name || t("thiết bị", "device")}`
                         : `Quick Share ${t("từ", "from")} ${qsTransfer.meta?.source?.name || t("Thiết bị Android", "Android Device")}`
                       }
                     </h3>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-[color:var(--color-gray-400)]">
                       {getQSStateText(qsTransfer.state, qsTransfer.rtype === "Outbound")}
                     </p>
                   </div>
@@ -1507,21 +1507,21 @@ function App() {
                 
                 {/* PIN Code - Only for inbound consent */}
                 {qsTransfer.rtype !== "Outbound" && qsTransfer.meta?.pin_code && (
-                  <div className="bg-gray-800 p-2 rounded-lg text-center">
-                    <span className="text-gray-400 text-xs uppercase tracking-widest block mb-1">{t("Mã PIN", "PIN Code")}</span>
-                    <span className="text-2xl font-mono text-white tracking-widest font-bold">{qsTransfer.meta.pin_code}</span>
+                  <div className="bg-tichphong-blue/10 border border-tichphong-blue/20 p-3 rounded-lg text-center">
+                    <span className="text-[color:var(--color-gray-400)] text-xs uppercase tracking-widest block mb-1">{t("Mã PIN", "PIN Code")}</span>
+                    <span className="text-2xl font-mono text-tichphong-blue tracking-widest font-bold">{qsTransfer.meta.pin_code}</span>
                   </div>
                 )}
                 
                 {/* Progress bar - for both sending and receiving */}
                 {(qsTransfer.state === "ReceivingFiles" || qsTransfer.state === "SendingFiles") && qsTransfer.meta && qsTransfer.meta.total_bytes > 0 && (
                   <div>
-                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <div className="flex justify-between text-xs text-[color:var(--color-gray-400)] mb-1">
                       <span>{formatSize(qsTransfer.meta.ack_bytes || 0)}</span>
-                      <span className="text-tichphong-blue">{Math.round(Math.min(100, (qsTransfer.meta.ack_bytes / qsTransfer.meta.total_bytes) * 100))}%</span>
+                      <span className="text-tichphong-blue font-semibold">{Math.round(Math.min(100, (qsTransfer.meta.ack_bytes / qsTransfer.meta.total_bytes) * 100))}%</span>
                       <span>{formatSize(qsTransfer.meta.total_bytes)}</span>
                     </div>
-                    <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden border border-gray-700">
+                    <div className="w-full bg-tichphong-blue/10 rounded-full h-2.5 overflow-hidden border border-tichphong-border">
                       <motion.div 
                         className={`h-full rounded-full ${qsTransfer.rtype === "Outbound" ? "bg-gradient-to-r from-tichphong-blue to-cyan-400" : "bg-gradient-to-r from-blue-500 to-blue-400"}`}
                         initial={{ width: 0 }}
@@ -1534,9 +1534,9 @@ function App() {
 
                 {/* File list for outbound */}
                 {qsTransfer.rtype === "Outbound" && qsTransfer.meta?.files && qsTransfer.meta.files.length > 0 && !(["SendingFiles", "ReceivingFiles"].includes(qsTransfer.state || "")) && (
-                  <div className="bg-gray-800/60 rounded-lg p-2 max-h-20 overflow-y-auto custom-scrollbar">
+                  <div className="bg-tichphong-blue/5 border border-tichphong-border rounded-lg p-2 max-h-20 overflow-y-auto custom-scrollbar">
                     {qsTransfer.meta.files.map((f, i) => (
-                      <div key={i} className="text-xs text-gray-400 truncate flex items-center gap-1.5 py-0.5">
+                      <div key={i} className="text-xs text-[color:var(--color-gray-400)] truncate flex items-center gap-1.5 py-0.5">
                         <FileIcon className="w-3 h-3 text-tichphong-blue shrink-0" />
                         {f.split(/(\\|\/)/g).pop()}
                       </div>
@@ -1549,7 +1549,7 @@ function App() {
                   <div className="flex gap-2 mt-2">
                     <button 
                       onClick={() => invoke("reject_quickshare", { id: qsTransfer.id })}
-                      className="flex-1 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition font-medium cursor-pointer"
+                      className="flex-1 py-2 rounded-lg border border-tichphong-border text-[color:var(--color-gray-400)] hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition font-medium cursor-pointer"
                     >
                       {t("Từ chối", "Decline")}
                     </button>

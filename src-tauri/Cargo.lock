@@ -2262,6 +2262,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hostname"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "617aaa3557aef3810a6369d0a99fac8a080891b68bd9f9812a1eeda0c0730cbd"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "windows-link 0.2.1",
+]
+
+[[package]]
 name = "html5ever"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2649,16 +2660,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "io-kit-sys"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b2d4429acc1deff0fbdece0325b4997bdb02b2c245ab7023fd5deca0f6348de"
-dependencies = [
- "core-foundation-sys",
- "mach2",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3016,24 +3017,6 @@ name = "macaddr"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baee0bbc17ce759db233beb01648088061bf678383130602a298e6998eedb2d8"
-
-[[package]]
-name = "mach"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b823e83b2affd8f40a9ee8c29dbc56404c1e34cd2710921f2801e2cf29527afa"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "mach2"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "markup5ever"
@@ -4568,6 +4551,7 @@ dependencies = [
  "hex",
  "hkdf",
  "hmac",
+ "hostname",
  "libaes",
  "log",
  "mdns-sd 0.10.4",
@@ -4580,7 +4564,6 @@ dependencies = [
  "rand 0.9.4",
  "serde",
  "sha2",
- "sys_metrics",
  "tokio",
  "tokio-util",
  "tracing-subscriber",
@@ -5302,20 +5285,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "sys_metrics"
-version = "0.2.7"
-source = "git+https://github.com/Martichou/sys_metrics#e5b324a17d1724bd97923a173c3535cc06a44b0c"
-dependencies = [
- "core-foundation-sys",
- "glob",
- "io-kit-sys",
- "lazy_static",
- "libc",
- "mach",
- "serde",
 ]
 
 [[package]]
