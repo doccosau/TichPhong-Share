@@ -26,3 +26,5 @@ dist-ssr
 # Tauri
 src-tauri/target
 
+# Build Artifacts
+*.deb
