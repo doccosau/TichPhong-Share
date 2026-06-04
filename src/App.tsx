@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isPermissionGranted, requestPermission, sendNotification, onAction } from '@tauri-apps/plugin-notification';
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart } from "lucide-react";
+import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw } from "lucide-react";
 import QRCode from "react-qr-code";
 import "./App.css";
 
@@ -167,6 +167,33 @@ function App() {
   const [websharePort, setWebsharePort] = useState(8081);
   const [showGuide, setShowGuide] = useState(false);
   const [showDonate, setShowDonate] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error'>('idle');
+  const [latestVersion, setLatestVersion] = useState('');
+  const [releaseUrl, setReleaseUrl] = useState('');
+
+  const handleCheckUpdate = async () => {
+    setUpdateStatus('checking');
+    try {
+      const { getVersion } = await import('@tauri-apps/api/app');
+      const currentVersion = await getVersion();
+      const res = await fetch("https://api.github.com/repos/doccosau/TichPhong-Share/releases/latest");
+      if (!res.ok) throw new Error("Failed to fetch update");
+      const data = await res.json();
+      const latest = data.tag_name.replace('v', '');
+      if (latest !== currentVersion && data.html_url) {
+        setLatestVersion(latest);
+        setReleaseUrl(data.html_url);
+        setUpdateStatus('available');
+      } else {
+        setUpdateStatus('latest');
+        setTimeout(() => setUpdateStatus('idle'), 3000);
+      }
+    } catch (e) {
+      console.error("Update check failed:", e);
+      setUpdateStatus('error');
+      setTimeout(() => setUpdateStatus('idle'), 3000);
+    }
+  };
 
   const t = (vi: string, en: string) => settings.language === 'en' ? en : vi;
 
@@ -1246,7 +1273,22 @@ function App() {
                       <button onClick={() => setShowDonate(true)} className="bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-500/10">
                         <Heart className="w-4 h-4" /> {t("Ủng hộ Dự án", "Donate")}
                       </button>
+                      <button onClick={handleCheckUpdate} disabled={updateStatus === 'checking'} className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer flex items-center justify-center gap-2">
+                        <RefreshCw className={`w-4 h-4 ${updateStatus === 'checking' ? 'animate-spin' : ''}`} /> 
+                        {updateStatus === 'checking' ? t("Đang kiểm tra...", "Checking...") : t("Kiểm tra cập nhật", "Check for Updates")}
+                      </button>
                     </div>
+                    {updateStatus === 'latest' && <p className="mt-4 text-green-400 text-sm font-medium">{t("Bạn đang dùng phiên bản mới nhất!", "You are using the latest version!")}</p>}
+                    {updateStatus === 'error' && <p className="mt-4 text-red-400 text-sm font-medium">{t("Lỗi khi kiểm tra cập nhật. Vui lòng thử lại sau.", "Error checking for updates. Please try again later.")}</p>}
+                    {updateStatus === 'available' && (
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 bg-tichphong-blue/10 border border-tichphong-blue/30 rounded-xl p-5 w-full max-w-md flex flex-col items-center">
+                        <p className="font-bold text-white mb-2">{t("Đã có phiên bản mới: ", "New version available: ")} v{latestVersion}</p>
+                        <p className="text-xs text-gray-400 mb-4">{t("Truy cập GitHub để tải bản cài đặt tương thích với thiết bị của bạn.", "Go to GitHub to download the compatible installer for your device.")}</p>
+                        <button onClick={() => window.open(releaseUrl, '_blank')} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 w-full flex items-center justify-center gap-2 cursor-pointer">
+                          <Download className="w-4 h-4" /> {t("Tải về ngay", "Download Now")}
+                        </button>
+                      </motion.div>
+                    )}
                   </div>
                   
                   <div className="glass-card rounded-2xl p-6 border border-white/5 text-center flex flex-col items-center">
