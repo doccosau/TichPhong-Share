@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isPermissionGranted, requestPermission, sendNotification, onAction } from '@tauri-apps/plugin-notification';
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw, Zap } from "lucide-react";
+import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw, Zap, History } from "lucide-react";
 import QRCode from "react-qr-code";
 import "./App.css";
 
@@ -36,6 +36,9 @@ type ShareSettings = {
   language?: 'vi' | 'en';
   theme?: 'dark' | 'light';
   accent?: 'jade' | 'mystic' | 'cinnabar' | 'purple' | 'tet' | 'zen';
+  auto_accept?: boolean;
+  auto_start?: boolean;
+  history?: {name: string, device: string, time: string, direction: string}[];
 };
 
 // QUICK SHARE TYPES
@@ -97,7 +100,7 @@ function App() {
     files?: string[];
   };
   const [transfer, setTransfer] = useState<TransferState | null>(null);
-  const [sentHistory, setSentHistory] = useState<{name: string, device: string, time: string}[]>([]);
+  const [sentHistory, setSentHistory] = useState<{name: string, device: string, time: string, direction?: string}[]>([]);
   
   const [pendingReceives, setPendingReceives] = useState<ReceiveSession[]>([]);
   
@@ -109,7 +112,7 @@ function App() {
   };
   const [receiveProgresses, setReceiveProgresses] = useState<Record<string, ReceiveProgress>>({});
   
-  const [receivedHistory, setReceivedHistory] = useState<{name: string, device: string, time: string}[]>([]);
+  const [receivedHistory, setReceivedHistory] = useState<{name: string, device: string, time: string, direction?: string}[]>([]);
   
   // Settings
   const [settings, setSettings] = useState<ShareSettings>({
@@ -118,7 +121,9 @@ function App() {
     download_dir: "~/Downloads/TichPhongShare",
     language: "vi",
     theme: "light",
-    accent: "jade"
+    accent: "jade",
+    auto_start: false,
+    history: []
   });
 
   // Nhac-Quan Exact Accents Mapping with Light Background Tints
@@ -158,25 +163,30 @@ function App() {
       document.documentElement.style.removeProperty('--color-gray-500');
       document.documentElement.className = 'theme-dark';
     }
+
+    // Sync theme to WebApp in real-time
+    invoke("qrc_update_theme", { theme: settings.theme || 'dark', accent: settings.accent || 'jade' }).catch(() => {});
   }, [settings.accent, settings.theme]);
   
   // Portal State
   const [ftpAddress, setFtpAddress] = useState("");
   const [webdavStatus, setWebdavStatus] = useState(false);
-  const [webshareStatus, setWebshareStatus] = useState(false);
-  const [websharePort, setWebsharePort] = useState(8081);
   const [showGuide, setShowGuide] = useState(false);
   const [showDonate, setShowDonate] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
   const [releaseUrl, setReleaseUrl] = useState('');
 
   // QR Connect State
   const [qrcActive, setQrcActive] = useState(false);
+  const [qrcMode, setQrcMode] = useState<'lan' | 'direct'>('lan');
   const [qrcUrl, setQrcUrl] = useState('');
+  const [qrcWifiQr, setQrcWifiQr] = useState<string | null>(null);
   const [qrcConnectedDevice, setQrcConnectedDevice] = useState<string | null>(null);
   const [qrcSharedFiles, setQrcSharedFiles] = useState<string[]>([]);
   const [qrcPendingUploads, setQrcPendingUploads] = useState<{id: string, name: string, size: number}[]>([]);
+  const [qrcActiveUploads, setQrcActiveUploads] = useState<{id: string, name: string, loaded: number, total: number}[]>([]);
   const [qrcReceivedFiles, setQrcReceivedFiles] = useState<{name: string, time: string}[]>([]);
 
   const handleCheckUpdate = async () => {
@@ -242,6 +252,24 @@ function App() {
         const ip = await invoke<string>("get_local_ip");
         setLocalIp(ip);
         const st = await invoke<ShareSettings>("get_settings");
+        
+        // Load history
+        if (st.history) {
+          setReceivedHistory(st.history.filter(h => h.direction === 'inbound'));
+          setSentHistory(st.history.filter(h => h.direction === 'outbound'));
+        }
+
+        // Sync autostart
+        try {
+          const { isEnabled } = await import('@tauri-apps/plugin-autostart');
+          const enabled = await isEnabled();
+          if (st.auto_start !== enabled) {
+            st.auto_start = enabled;
+          }
+        } catch (e) {
+          console.log("Autostart plugin error:", e);
+        }
+        
         setSettings(st);
       } catch (e) {
         setLocalIp("127.0.0.1");
@@ -394,12 +422,23 @@ function App() {
       );
     });
     
-    const unlistenFileReceived = listen<any>("file-received", (event) => {
-      setReceivedHistory(prev => [{
+    const unlistenFileReceived = listen<any>("file-received", async (event) => {
+      const newItem = {
         name: event.payload.name, 
         device: event.payload.device, 
-        time: event.payload.time
-      }, ...prev]);
+        time: event.payload.time,
+        direction: 'inbound'
+      };
+      setReceivedHistory(prev => [newItem, ...prev]);
+      
+      // Save to persistent history
+      setSettings(prev => {
+        const newHistory = [newItem, ...(prev.history || [])].slice(0, 50); // Keep last 50
+        const ns = { ...prev, history: newHistory };
+        invoke("update_settings", { newSettings: ns }).catch(console.error);
+        return ns;
+      });
+      
       setReceiveProgresses(prev => {
         const copy = { ...prev };
         delete copy[event.payload.name];
@@ -415,14 +454,35 @@ function App() {
     });
     
     const unlistenSendProgress = listen<any>("send-progress", (event) => {
-      setTransfer(prev => prev ? { 
-        ...prev, 
-        status: event.payload.status || 'sending', 
-        progress: event.payload.progress,
-        sent: event.payload.sent,
-        total: event.payload.total,
-        message: "Đang truyền tải dữ liệu..." 
-      } : null);
+      setTransfer(prev => {
+        if (event.payload.status === 'success') {
+          // Add to sent history
+          const newItem = {
+            name: prev?.files?.[0]?.split(/(\\|\/)/g).pop() || 'Unknown',
+            device: prev?.device || 'Unknown',
+            time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}),
+            direction: 'outbound'
+          };
+          setSentHistory(sh => [newItem, ...sh]);
+          
+          // Save to persistent history
+          setSettings(s => {
+            const newHistory = [newItem, ...(s.history || [])].slice(0, 50);
+            const ns = { ...s, history: newHistory };
+            invoke("update_settings", { newSettings: ns }).catch(console.error);
+            return ns;
+          });
+        }
+        
+        return prev ? { 
+          ...prev, 
+          status: event.payload.status || 'sending', 
+          progress: event.payload.progress,
+          sent: event.payload.sent,
+          total: event.payload.total,
+          message: event.payload.status === 'success' ? "Đã gửi thành công!" : "Đang truyền tải dữ liệu..." 
+        } : null;
+      });
     });
     
     return () => {
@@ -456,16 +516,32 @@ function App() {
         await win.show();
         await win.setFocus();
       } catch (e) { console.error(e); }
-      triggerOSNotification('QR Connect', `Có file gửi từ điện thoại: ${event.payload.name}`);
+      triggerOSNotification('QR Connect', `Có file gửi từ thiết bị: ${event.payload.name}`);
+    });
+    const unlistenQrcUploadProgress = listen<{id: string, loaded: number}>('qrc-upload-progress', (event) => {
+      setQrcActiveUploads(prev => prev.map(u => u.id === event.payload.id ? { ...u, loaded: event.payload.loaded } : u));
     });
     const unlistenQrcUploadComplete = listen<{id: string, name: string, time: string}>('qrc-upload-complete', (event) => {
       setQrcPendingUploads(prev => prev.filter(u => u.id !== event.payload.id));
-      setQrcReceivedFiles(prev => [{ name: event.payload.name, time: event.payload.time }, ...prev]);
+      setQrcActiveUploads(prev => prev.filter(u => u.id !== event.payload.id));
+      
+      const newItem = { name: event.payload.name, device: 'Web Browser', time: event.payload.time, direction: 'inbound' };
+      setQrcReceivedFiles(prev => [newItem, ...prev]);
+      setReceivedHistory(prev => [newItem, ...prev]);
+      
+      // Save to persistent history
+      setSettings(prev => {
+        const newHistory = [newItem, ...(prev.history || [])].slice(0, 50);
+        const ns = { ...prev, history: newHistory };
+        invoke("update_settings", { newSettings: ns }).catch(console.error);
+        return ns;
+      });
     });
     return () => {
       unlistenQrcConnected.then(f => f());
       unlistenQrcDisconnected.then(f => f());
       unlistenQrcUploadRequest.then(f => f());
+      unlistenQrcUploadProgress.then(f => f());
       unlistenQrcUploadComplete.then(f => f());
     };
   }, []);
@@ -590,6 +666,32 @@ function App() {
     }
   };
 
+  // Auto-Accept Hooks
+  useEffect(() => {
+    if (settings.auto_accept && pendingReceives.length > 0) {
+      pendingReceives.forEach(req => {
+        handleAccept(req.sessionId);
+      });
+    }
+  }, [pendingReceives, settings.auto_accept]);
+
+  useEffect(() => {
+    if (settings.auto_accept && qsTransfer) {
+      if (qsTransfer.rtype !== "Outbound" && qsTransfer.state === "WaitingForUserConsent") {
+        invoke("accept_quickshare", { id: qsTransfer.id }).catch(console.error);
+      }
+    }
+  }, [qsTransfer, settings.auto_accept]);
+
+  useEffect(() => {
+    if (settings.auto_accept && qrcPendingUploads.length > 0) {
+      qrcPendingUploads.forEach(req => {
+        invoke("qrc_accept_upload", { id: req.id }).catch(console.error);
+        setQrcPendingUploads(prev => prev.filter(r => r.id !== req.id));
+      });
+    }
+  }, [qrcPendingUploads, settings.auto_accept]);
+
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -620,66 +722,66 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-64 bg-tichphong-surface/50 border-r border-tichphong-border flex flex-col p-4 gap-2">
+        <div className="w-16 md:w-64 shrink-0 bg-tichphong-surface/50 border-r border-tichphong-border flex flex-col p-2 md:p-4 gap-2 transition-all duration-300">
           <button 
             onClick={() => setActiveTab("send")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'send' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+            className={`flex items-center justify-center md:justify-start gap-3 p-3 md:px-4 md:py-3 rounded-xl transition-all ${activeTab === 'send' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
           >
-            <Send className="w-5 h-5" />
-            <span className="font-medium">{t("Gửi File", "Send File")}</span>
+            <Send className="w-5 h-5 shrink-0" />
+            <span className="font-medium hidden md:block truncate">{t("Gửi File", "Send File")}</span>
           </button>
           <button 
             onClick={() => setActiveTab("receive")}
-            className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${activeTab === 'receive' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+            className={`flex items-center justify-center md:justify-between p-3 md:px-4 md:py-3 rounded-xl transition-all relative ${activeTab === 'receive' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
           >
             <div className="flex items-center gap-3">
-              <Download className="w-5 h-5" />
-              <span className="font-medium">{t("Nhận File", "Receive File")}</span>
+              <Download className="w-5 h-5 shrink-0" />
+              <span className="font-medium hidden md:block truncate">{t("Nhận File", "Receive File")}</span>
             </div>
             {pendingReceives.length > 0 && (
-              <span className="bg-red-500 text-[#ffffff] text-xs font-bold px-2 py-0.5 rounded-full">{pendingReceives.length}</span>
+              <span className="absolute top-1 right-1 md:relative md:top-auto md:right-auto bg-red-500 text-[#ffffff] text-[10px] md:text-xs font-bold w-4 h-4 md:w-auto md:h-auto md:px-2 md:py-0.5 flex items-center justify-center rounded-full">{pendingReceives.length}</span>
             )}
           </button>
           <button 
             onClick={() => setActiveTab("qrconnect")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'qrconnect' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+            className={`flex items-center justify-center md:justify-start gap-3 p-3 md:px-4 md:py-3 rounded-xl transition-all relative ${activeTab === 'qrconnect' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
           >
-            <Zap className="w-5 h-5" />
-            <span className="font-medium">QR Connect</span>
-            {qrcConnectedDevice && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>}
+            <Zap className="w-5 h-5 shrink-0" />
+            <span className="font-medium hidden md:block truncate">QR Connect</span>
+            {qrcConnectedDevice && <span className="absolute top-2 right-2 md:relative md:top-auto md:right-auto w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>}
           </button>
           <button 
             onClick={() => setActiveTab("portal")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'portal' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+            className={`flex items-center justify-center md:justify-start gap-3 p-3 md:px-4 md:py-3 rounded-xl transition-all ${activeTab === 'portal' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
           >
-            <Globe className="w-5 h-5" />
-            <span className="font-medium">Device Portal</span>
+            <Globe className="w-5 h-5 shrink-0" />
+            <span className="font-medium hidden md:block truncate">Device Portal</span>
           </button>
           
           <button 
             onClick={() => setActiveTab("settings")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+            className={`flex items-center justify-center md:justify-start gap-3 p-3 md:px-4 md:py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
           >
-            <Settings className="w-5 h-5" />
-            <span className="font-medium">{t("Cài đặt", "Settings")}</span>
+            <Settings className="w-5 h-5 shrink-0" />
+            <span className="font-medium hidden md:block truncate">{t("Cài đặt", "Settings")}</span>
           </button>
           
           <button 
             onClick={() => setActiveTab("about")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'about' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+            className={`flex items-center justify-center md:justify-start gap-3 p-3 md:px-4 md:py-3 rounded-xl transition-all ${activeTab === 'about' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
           >
-            <Info className="w-5 h-5" />
-            <span className="font-medium">{t("Giới thiệu", "About")}</span>
+            <Info className="w-5 h-5 shrink-0" />
+            <span className="font-medium hidden md:block truncate">{t("Giới thiệu", "About")}</span>
           </button>
           
-          <div className="mt-auto bg-white/5 p-4 rounded-xl border border-white/5">
+          <div className="mt-auto bg-white/5 p-4 rounded-xl border border-white/5 hidden md:block">
             <p className="text-xs text-gray-500 mb-1">{t("IP cục bộ", "Local IP")}</p>
             <p className="font-mono text-sm text-tichphong-blue">{localIp}</p>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className={`flex-1 relative overflow-y-auto p-8 bg-gradient-to-br from-tichphong-dark to-tichphong-surface`}>
+        <div className={`flex-1 relative overflow-y-auto p-4 md:p-8 bg-gradient-to-br from-tichphong-dark to-tichphong-surface`}>
           
           <AnimatePresence mode="wait">
             {activeTab === "send" && (
@@ -808,35 +910,43 @@ function App() {
                   </div>
                 </div>
                 
-                {/* Pending Requests */}
+                {/* Pending Requests — MODAL OVERLAY */}
                 {pendingReceives.length > 0 && (
-                  <div className="bg-tichphong-blue/10 border border-tichphong-blue/30 rounded-2xl p-6">
-                    <h2 className="text-xl font-semibold mb-4 text-tichphong-blue">{t("Yêu cầu đến", "Incoming Requests")} ({pendingReceives.length})</h2>
-                    <div className="flex flex-col gap-4">
-                      {pendingReceives.map(req => (
-                        <div key={req.sessionId} className="bg-tichphong-surface border border-white/10 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-                          <div className="flex-1 w-full">
-                            <p className="font-bold text-lg">{req.sender} <span className="font-normal text-gray-400 text-sm">{t("muốn gửi cho bạn", "wants to send you")}</span></p>
-                            <div className="mt-2 flex flex-col gap-1">
-                              {Object.values(req.files).map(f => (
-                                <p key={f.id} className="text-sm text-gray-300 flex items-center gap-2">
-                                  <FileIcon className="w-4 h-4 text-gray-500" />
-                                  {f.fileName} <span className="text-gray-500 text-xs">({formatSize(f.size)})</span>
-                                </p>
-                              ))}
+                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+                    <motion.div initial={{ opacity: 0, y: -30, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border border-tichphong-blue/30" style={{ background: 'var(--tp-surface)' }}>
+                      <div className="p-4 border-b border-tichphong-blue/20 flex items-center gap-3" style={{ background: 'rgba(var(--tp-accent-rgb, 5,150,105),0.08)' }}>
+                        <div className="w-10 h-10 rounded-xl bg-tichphong-blue/20 text-tichphong-blue flex items-center justify-center animate-bounce"><Download className="w-5 h-5" /></div>
+                        <div>
+                          <h2 className="font-bold text-tichphong-blue text-base">{t("📥 Yêu cầu nhận file", "📥 Incoming File Request")}</h2>
+                          <p className="text-xs text-gray-400">{t(`Có ${pendingReceives.length} yêu cầu đang chờ duyệt`, `${pendingReceives.length} pending request(s)`)}</p>
+                        </div>
+                      </div>
+                      <div className="p-4 flex flex-col gap-4 max-h-[60vh] overflow-y-auto">
+                        {pendingReceives.map(req => (
+                          <div key={req.sessionId} className="flex flex-col gap-3 bg-white/5 p-4 rounded-xl border border-white/10">
+                            <div>
+                              <p className="font-bold text-sm">{req.sender} <span className="font-normal text-gray-400 text-xs">{t("muốn gửi cho bạn", "wants to send you")}</span></p>
+                              <div className="mt-2 flex flex-col gap-1 max-h-24 overflow-y-auto">
+                                {Object.values(req.files).map(f => (
+                                  <p key={f.id} className="text-xs text-gray-300 flex items-center gap-2">
+                                    <FileIcon className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                                    <span className="truncate">{f.fileName}</span> <span className="text-gray-500 shrink-0">({formatSize(f.size)})</span>
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => handleReject(req.sessionId)} className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer">
+                                <XCircle className="w-4 h-4" /> {t("Từ chối", "Decline")}
+                              </button>
+                              <button onClick={() => handleAccept(req.sessionId)} className="flex-1 flex items-center justify-center gap-2 bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-lg shadow-tichphong-blue/20 cursor-pointer">
+                                <CheckCircle className="w-4 h-4" /> {t("Chấp nhận", "Accept")}
+                              </button>
                             </div>
                           </div>
-                          <div className="flex gap-3 w-full md:w-auto">
-                            <button onClick={() => handleReject(req.sessionId)} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2 rounded-lg font-medium transition-colors">
-                              <XCircle className="w-4 h-4" /> {t("Từ chối", "Decline")}
-                            </button>
-                            <button onClick={() => handleAccept(req.sessionId)} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-4 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-tichphong-blue/20">
-                              <CheckCircle className="w-4 h-4" /> {t("Chấp nhận", "Accept")}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </motion.div>
                   </div>
                 )}
                 
@@ -920,76 +1030,121 @@ function App() {
                   <p className="text-gray-400">{t("Quét mã QR để kết nối điện thoại — chia sẻ file 2 chiều qua trình duyệt, không cần cài app.", "Scan QR to connect phone — share files bidirectionally via browser, no app needed.")}</p>
                 </div>
 
-                {/* Start/Stop + QR Code */}
-                <div className="glass-card rounded-2xl p-6 border border-white/5">
-                  <div className="flex flex-col md:flex-row items-center gap-8">
-                    {/* QR Code Area */}
-                    <div className="flex flex-col items-center gap-4">
-                      {qrcActive && qrcUrl ? (
-                        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center">
-                          <div className="bg-white p-4 rounded-2xl shadow-2xl">
-                            <QRCode value={qrcUrl} size={180} style={{ height: "auto", maxWidth: "100%", width: "100%" }} />
-                          </div>
-                          <code className="mt-3 text-xs text-gray-500 break-all text-center max-w-[220px]">{qrcUrl}</code>
-                        </motion.div>
-                      ) : (
-                        <div className="w-[212px] h-[212px] bg-white/5 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center">
-                          <QrCode className="w-12 h-12 text-gray-600 mb-2" />
-                          <p className="text-xs text-gray-500 text-center px-4">{t("Bấm Bắt đầu để sinh mã QR", "Press Start to generate QR code")}</p>
+                    {/* Start/Stop + QR Code */}
+                    <div className="glass-card rounded-2xl p-6 border border-white/5">
+                      <div className="flex flex-col md:flex-row items-center gap-8">
+                        {/* QR Code Area */}
+                        <div className="flex gap-6 items-center overflow-x-auto pb-4 md:pb-0 w-full md:w-auto shrink-0">
+                          {qrcActive && qrcUrl ? (
+                            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex gap-6">
+                              {qrcWifiQr && (
+                                <div className="flex flex-col items-center">
+                                  <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+                                    <QRCode value={qrcWifiQr} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
+                                  </div>
+                                  <p className="mt-3 text-sm font-semibold text-tichphong-blue">1. {t("Kết nối Wi-Fi", "Connect Wi-Fi")}</p>
+                                </div>
+                              )}
+                              <div className="flex flex-col items-center">
+                                <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+                                  <QRCode value={qrcUrl} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
+                                </div>
+                                <p className={`mt-3 text-sm font-semibold ${qrcWifiQr ? 'text-green-400' : 'text-white'}`}>
+                                  {qrcWifiQr ? `2. ${t("Mở Web App", "Open Web App")}` : t("Quét để mở Web", "Scan to open Web")}
+                                </p>
+                                {!qrcWifiQr && (
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <code className="text-xs text-gray-500 break-all text-center max-w-[160px]">{qrcUrl}</code>
+                                    <button 
+                                      onClick={() => navigator.clipboard.writeText(qrcUrl).then(() => alert(t("Đã copy link!", "Link copied!")))}
+                                      className="text-gray-400 hover:text-white"
+                                      title="Copy Link"
+                                    >
+                                      <Copy className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          ) : (
+                            <div className="w-[180px] h-[180px] bg-white/5 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center">
+                              <QrCode className="w-12 h-12 text-gray-600 mb-2" />
+                              <p className="text-xs text-gray-500 text-center px-4">{t("Bấm Bắt đầu để sinh mã QR", "Press Start to generate QR code")}</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Status + Controls */}
-                    <div className="flex-1 flex flex-col gap-4 w-full">
-                      <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/5">
-                        <div className={`w-3 h-3 rounded-full ${qrcConnectedDevice ? 'bg-green-400 animate-pulse' : qrcActive ? 'bg-yellow-400 animate-pulse' : 'bg-gray-600'}`}></div>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {qrcConnectedDevice ? `📱 ${t("Đã kết nối:", "Connected:")} ${qrcConnectedDevice}` : qrcActive ? t("Đang chờ kết nối...", "Waiting for connection...") : t("Chưa hoạt động", "Inactive")}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {qrcActive ? t("Điện thoại quét mã QR để kết nối", "Phone scans QR code to connect") : t("Bấm Bắt đầu để tạo phiên mới", "Press Start to create a new session")}
-                          </p>
+    
+                        {/* Status + Controls */}
+                        <div className="flex-1 flex flex-col gap-4 w-full">
+                          <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                            <div className={`w-3 h-3 rounded-full ${qrcConnectedDevice ? 'bg-green-400 animate-pulse' : qrcActive ? 'bg-yellow-400 animate-pulse' : 'bg-gray-600'}`}></div>
+                            <div>
+                              <p className="font-medium text-sm">
+                                {qrcConnectedDevice ? `📱 ${t("Đã kết nối:", "Connected:")} ${qrcConnectedDevice}` : qrcActive ? t("Đang chờ kết nối...", "Waiting for connection...") : t("Chưa hoạt động", "Inactive")}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {qrcActive ? t("Điện thoại quét mã QR để kết nối", "Phone scans QR code to connect") : t("Bấm Bắt đầu để tạo phiên mới", "Press Start to create a new session")}
+                              </p>
+                            </div>
+                          </div>
+    
+                          {!qrcActive ? (
+                            <div className="flex flex-col gap-3">
+                              <div className="flex bg-white/5 p-1 rounded-xl">
+                                <button
+                                  onClick={() => setQrcMode('lan')}
+                                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${qrcMode === 'lan' ? 'bg-tichphong-blue text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                >
+                                  {t("LAN Mode (Chung mạng)", "LAN Mode (Same network)")}
+                                </button>
+                                <button
+                                  onClick={() => setQrcMode('direct')}
+                                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 ${qrcMode === 'direct' ? 'bg-orange-500 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                >
+                                  🔥 {t("Direct Mode (Hotspot)", "Direct Mode (Hotspot)")}
+                                </button>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await invoke<{ url: string; wifi_qr: string | null }>("start_qr_connect", { mode: qrcMode });
+                                    setQrcUrl(res.url);
+                                    setQrcWifiQr(res.wifi_qr);
+                                    setQrcActive(true);
+                                    setQrcSharedFiles([]);
+                                    setQrcConnectedDevice(null);
+                                    setQrcPendingUploads([]);
+                                    setQrcReceivedFiles([]);
+                                  } catch (e: any) { 
+                                    alert(e.toString());
+                                    console.error(e); 
+                                  }
+                                }}
+                                className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-3 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 flex items-center justify-center gap-2 cursor-pointer w-full"
+                              >
+                                <Zap className="w-5 h-5" /> {t("Bắt đầu", "Start")}
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await invoke("stop_qr_connect");
+                                  setQrcActive(false);
+                                  setQrcUrl('');
+                                  setQrcWifiQr(null);
+                                  setQrcConnectedDevice(null);
+                                  setQrcSharedFiles([]);
+                                } catch (e) { console.error(e); }
+                              }}
+                              className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-6 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer w-full"
+                            >
+                              <XCircle className="w-5 h-5" /> {t("Dừng phiên", "Stop Session")}
+                            </button>
+                          )}
                         </div>
                       </div>
-
-                      {!qrcActive ? (
-                        <button
-                          onClick={async () => {
-                            try {
-                              const url = await invoke<string>("start_qr_connect");
-                              setQrcUrl(url);
-                              setQrcActive(true);
-                              setQrcSharedFiles([]);
-                              setQrcConnectedDevice(null);
-                              setQrcPendingUploads([]);
-                              setQrcReceivedFiles([]);
-                            } catch (e) { console.error(e); }
-                          }}
-                          className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-3 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          <Zap className="w-5 h-5" /> {t("Bắt đầu", "Start")}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={async () => {
-                            try {
-                              await invoke("stop_qr_connect");
-                              setQrcActive(false);
-                              setQrcUrl('');
-                              setQrcConnectedDevice(null);
-                              setQrcSharedFiles([]);
-                            } catch (e) { console.error(e); }
-                          }}
-                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-6 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          <XCircle className="w-5 h-5" /> {t("Dừng phiên", "Stop Session")}
-                        </button>
-                      )}
                     </div>
-                  </div>
-                </div>
 
                 {/* Share files from PC to Phone */}
                 {qrcActive && (
@@ -1044,31 +1199,72 @@ function App() {
                   </motion.div>
                 )}
 
-                {/* Pending uploads from Phone */}
+                {/* Pending uploads from Phone — MODAL OVERLAY at top */}
                 {qrcPendingUploads.length > 0 && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl border border-yellow-500/30 overflow-hidden bg-yellow-500/5">
-                    <div className="p-4 border-b border-yellow-500/20 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-400 flex items-center justify-center"><Download className="w-4 h-4" /></div>
-                      <h2 className="font-semibold text-yellow-400">{t("File chờ duyệt từ Điện thoại", "Pending Files from Phone")}</h2>
+                  <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+                    <motion.div initial={{ opacity: 0, y: -30, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="w-full max-w-lg rounded-2xl border border-yellow-500/30 overflow-hidden shadow-2xl" style={{ background: 'var(--tp-surface)', borderColor: 'rgba(234,179,8,0.3)' }}>
+                      <div className="p-4 border-b border-yellow-500/20 flex items-center gap-3" style={{ background: 'rgba(234,179,8,0.08)' }}>
+                        <div className="w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center animate-bounce"><Download className="w-5 h-5" /></div>
+                        <div>
+                          <h2 className="font-bold text-yellow-400 text-base">{t("📱 File từ thiết bị di động", "📱 Files from Mobile")}</h2>
+                          <p className="text-xs text-gray-400">{t("Có file chờ duyệt — vui lòng chấp nhận hoặc từ chối", "Pending files — please accept or decline")}</p>
+                        </div>
+                      </div>
+                      <div className="p-4 flex flex-col gap-3 max-h-[60vh] overflow-y-auto">
+                        {qrcPendingUploads.map(upload => (
+                          <div key={upload.id} className="flex flex-col gap-3 bg-white/5 p-4 rounded-xl border border-white/10">
+                            <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                              <FileIcon className="w-6 h-6 text-yellow-400 shrink-0" />
+                              <div className="flex-1 overflow-hidden min-w-0">
+                                <p className="font-semibold text-sm truncate">{upload.name}</p>
+                                <p className="text-xs text-gray-500">{formatSize(upload.size)}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => invoke("qrc_reject_upload", { uploadId: upload.id }).then(() => setQrcPendingUploads(prev => prev.filter(u => u.id !== upload.id)))} className="flex-1 justify-center bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer">
+                                <XCircle className="w-4 h-4 shrink-0" /> {t("Từ chối", "Decline")}
+                              </button>
+                              <button onClick={() => {
+                                setQrcActiveUploads(prev => [...prev, { id: upload.id, name: upload.name, loaded: 0, total: upload.size }]);
+                                setQrcPendingUploads(prev => prev.filter(u => u.id !== upload.id));
+                                invoke("qrc_accept_upload", { uploadId: upload.id });
+                              }} className="flex-1 justify-center bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-lg shadow-tichphong-blue/20">
+                                <CheckCircle className="w-4 h-4 shrink-0" /> {t("Chấp nhận", "Accept")}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+
+                {/* Active Uploads (Transferring) */}
+                {qrcActiveUploads.length > 0 && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl border border-tichphong-blue/30 overflow-hidden bg-tichphong-blue/5">
+                    <div className="p-4 border-b border-tichphong-blue/20 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-tichphong-blue/20 text-tichphong-blue flex items-center justify-center animate-pulse"><Download className="w-4 h-4" /></div>
+                      <h2 className="font-semibold text-tichphong-blue">{t("Đang nhận file...", "Receiving...")}</h2>
                     </div>
                     <div className="p-4 flex flex-col gap-3">
-                      {qrcPendingUploads.map(upload => (
-                        <div key={upload.id} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
-                          <FileIcon className="w-5 h-5 text-yellow-400 shrink-0" />
-                          <div className="flex-1 overflow-hidden">
-                            <p className="font-medium text-sm truncate">{upload.name}</p>
-                            <p className="text-xs text-gray-500">{formatSize(upload.size)}</p>
+                      {qrcActiveUploads.map(upload => {
+                        const percent = upload.total > 0 ? Math.round((upload.loaded / upload.total) * 100) : 0;
+                        return (
+                          <div key={upload.id} className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/10">
+                            <div className="flex items-center gap-3">
+                              <FileIcon className="w-5 h-5 text-tichphong-blue shrink-0" />
+                              <div className="flex-1 overflow-hidden">
+                                <p className="font-medium text-sm truncate">{upload.name}</p>
+                                <p className="text-xs text-gray-500">{formatSize(upload.loaded)} / {formatSize(upload.total)}</p>
+                              </div>
+                              <div className="text-sm font-semibold text-tichphong-blue shrink-0">{percent}%</div>
+                            </div>
+                            <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden mt-1">
+                              <div className="h-full bg-tichphong-blue transition-all duration-300" style={{ width: `${percent}%` }} />
+                            </div>
                           </div>
-                          <div className="flex gap-2 shrink-0">
-                            <button onClick={() => invoke("qrc_reject_upload", { uploadId: upload.id }).then(() => setQrcPendingUploads(prev => prev.filter(u => u.id !== upload.id)))} className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 cursor-pointer">
-                              <XCircle className="w-3.5 h-3.5" /> {t("Từ chối", "Decline")}
-                            </button>
-                            <button onClick={() => invoke("qrc_accept_upload", { uploadId: upload.id })} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 cursor-pointer shadow-lg shadow-tichphong-blue/20">
-                              <CheckCircle className="w-3.5 h-3.5" /> {t("Chấp nhận", "Accept")}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </motion.div>
                 )}
@@ -1180,83 +1376,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* WebShare (QR Code) */}
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 md:col-span-2 relative overflow-hidden group hover:border-green-500/50 transition-colors">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                      <Globe className="w-48 h-48" />
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 relative z-10">
-                      <div className="flex gap-4">
-                        <div className="bg-green-500/20 w-12 h-12 rounded-xl flex items-center justify-center text-green-400 shrink-0">
-                          <QrCode className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-semibold mb-1">WebShare ({t("Chia sẻ mã QR", "QR Code Sharing")})</h2>
-                          <p className="text-sm text-gray-400 leading-relaxed max-w-xl mb-3">{t("Chia sẻ nhanh với thiết bị lạ. Chọn file trên máy tính và quét mã QR để tải ngay trên trình duyệt mà không cần cài thêm ứng dụng.", "Quick sharing with unknown devices. Select files on PC and scan QR to download directly in browser without installing apps.")}</p>
-                          {webshareStatus && (
-                            <div className="bg-green-500/10 border border-green-500/20 text-green-400 text-sm p-3 rounded-lg flex items-start gap-2 max-w-sm">
-                              <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                              <p>{t("Đang chia sẻ file. Quét mã QR để tải về.", "Sharing files. Scan QR code to download.")}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <button 
-                          onClick={async () => {
-                            import('@tauri-apps/plugin-dialog').then(async ({ open }) => {
-                              const selected = await open({ multiple: true });
-                              if (selected === null) return;
-                              const files = Array.isArray(selected) ? selected : [selected];
-                              
-                              invoke("start_webshare", { files })
-                                .then((port) => {
-                                  setWebsharePort(port as number);
-                                  setWebshareStatus(true);
-                                })
-                                .catch(err => alert("Lỗi WebShare: " + err));
-                            });
-                          }}
-                          className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-5 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap shadow-lg shadow-tichphong-blue/20"
-                        >
-                          {t("Chọn file chia sẻ", "Select files to share")}
-                        </button>
-                        {webshareStatus && (
-                          <button 
-                            onClick={() => {
-                              invoke("stop_webshare").then(() => setWebshareStatus(false));
-                            }}
-                            className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-5 py-2 rounded-lg font-medium transition-colors"
-                          >
-                            {t("Tắt chia sẻ", "Stop sharing")}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 bg-white/5 rounded-xl p-8 border border-white/5 flex flex-col items-center justify-center relative z-10 min-h-[250px]">
-                      {webshareStatus ? (
-                        <div className="flex flex-col items-center transition-all opacity-100 scale-100">
-                          <div className="bg-white p-3 rounded-xl shadow-2xl">
-                            <QRCode 
-                              value={`http://${localIp}:${websharePort}`} 
-                              size={160} 
-                              style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                            />
-                          </div>
-                          <p className="mt-4 font-medium text-white">
-                            {t("Quét để tải file", "Scan to download")}
-                          </p>
-                          <code className="mt-2 text-sm text-gray-400">http://{localIp}:{websharePort}</code>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center opacity-50 grayscale transition-all">
-                          <Wifi className="w-8 h-8 text-gray-600 mb-3" />
-                          <p className="text-gray-500 text-sm">{t("Chưa có phiên chia sẻ nào đang hoạt động", "No active share sessions")}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+
                 </div>
               </motion.div>
             )}
@@ -1330,11 +1450,28 @@ function App() {
                             <FolderOpen className="w-4 h-4 shrink-0 text-purple-400" />
                             <span className="truncate">{settings.download_dir}</span>
                           </div>
-                          <button onClick={handleSelectFolder} className="w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-purple-500/50 transition-all px-4 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2">
+                          <button onClick={handleSelectFolder} className="w-full bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-purple-500/50 transition-all px-4 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 cursor-pointer">
                             <FolderOpen className="w-4 h-4" /> {t("Thay đổi thư mục", "Change directory")}
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 mt-3">{t("Các file gửi đến sẽ được lưu tự động vào thư mục này.", "Incoming files will be automatically saved to this directory.")}</p>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-white mb-1">{t("Tự động nhận file", "Auto Accept Files")}</p>
+                          <p className="text-xs text-gray-500">{t("Bỏ qua bước xác nhận khi có thiết bị gửi file", "Skip approval when receiving files")}</p>
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            const ns = {...settings, auto_accept: !settings.auto_accept};
+                            setSettings(ns);
+                            await invoke("update_settings", { newSettings: ns });
+                          }}
+                          className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${settings.auto_accept ? 'bg-purple-500' : 'bg-white/20'}`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${settings.auto_accept ? 'translate-x-6.5' : 'translate-x-0.5'}`}></div>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1351,32 +1488,41 @@ function App() {
                       <h2 className="text-lg font-semibold text-white">{t("Thông tin Mạng & Giao thức", "Network & Protocol")}</h2>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
-                      <div className="bg-gradient-to-br from-black/40 to-black/20 p-5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+                      <div className="bg-gradient-to-br from-black/40 to-black/20 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
                         <div className="flex items-center gap-2 mb-2 text-gray-400">
-                          <Link2 className="w-4 h-4" />
-                          <p className="text-xs font-medium uppercase tracking-wider">{t("Giao thức cốt lõi", "Core Protocol")}</p>
+                          <Link2 className="w-4 h-4 text-green-400" />
+                          <p className="text-xs font-medium uppercase tracking-wider">LocalSend v2</p>
                         </div>
-                        <p className="font-semibold text-white text-lg">LocalSend v2</p>
-                        <p className="text-xs text-gray-500 mt-1">{t("Yêu cầu cài đặt app LocalSend trên điện thoại", "Requires LocalSend app on mobile")}</p>
+                        <p className="font-semibold text-white text-base mb-1">{t("Đa nền tảng", "Cross-platform")}</p>
+                        <p className="text-xs text-gray-500">{t("Cổng", "Port")}: 53317 (TCP/UDP)</p>
                       </div>
                       
-                      <div className="bg-gradient-to-br from-black/40 to-black/20 p-5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                      <div className="bg-gradient-to-br from-black/40 to-black/20 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
                         <div className="flex items-center gap-2 mb-2 text-gray-400">
-                          <Wifi className="w-4 h-4" />
-                          <p className="text-xs font-medium uppercase tracking-wider">{t("Cổng nhận file", "Receive Port")}</p>
+                          <Zap className="w-4 h-4 text-blue-400" />
+                          <p className="text-xs font-medium uppercase tracking-wider">Quick Share</p>
                         </div>
-                        <p className="font-semibold text-white text-lg">53317 (TCP/UDP)</p>
-                        <p className="text-xs text-green-400 mt-1 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-400"></span> {t("Đang lắng nghe", "Listening")}</p>
+                        <p className="font-semibold text-white text-base mb-1">{t("Siêu tốc", "High-speed")}</p>
+                        <p className="text-xs text-gray-500">mDNS & BLE Discovery</p>
                       </div>
 
-                      <div className="bg-gradient-to-br from-black/40 to-black/20 p-5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                      <div className="bg-gradient-to-br from-black/40 to-black/20 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
                         <div className="flex items-center gap-2 mb-2 text-gray-400">
-                          <Power className="w-4 h-4" />
-                          <p className="text-xs font-medium uppercase tracking-wider">{t("Trạng thái Dịch vụ", "Service Status")}</p>
+                          <QrCode className="w-4 h-4 text-orange-400" />
+                          <p className="text-xs font-medium uppercase tracking-wider">TichPhong Direct</p>
                         </div>
-                        <p className="font-semibold text-white text-lg">{t("Hoạt động tốt", "Healthy")}</p>
-                        <p className="text-xs text-green-400 mt-1 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-400"></span> Online</p>
+                        <p className="font-semibold text-white text-base mb-1">{t("Web App", "Web App")}</p>
+                        <p className="text-xs text-gray-500">{t("Giao diện QR Connect", "QR Connect Interface")}</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-black/40 to-black/20 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-2 mb-2 text-gray-400">
+                          <HardDrive className="w-4 h-4 text-purple-400" />
+                          <p className="text-xs font-medium uppercase tracking-wider">WebDAV</p>
+                        </div>
+                        <p className="font-semibold text-white text-base mb-1">{t("Ổ đĩa mạng", "Network Drive")}</p>
+                        <p className="text-xs text-gray-500">{t("Cổng", "Port")}: 8080 (TCP)</p>
                       </div>
                     </div>
                   </div>
@@ -1396,13 +1542,13 @@ function App() {
                     <div className="space-y-4 relative z-10">
                       <div className="grid grid-cols-2 gap-3">
                         <button 
-                          onClick={() => setSettings({...settings, theme: 'dark'})}
+                          onClick={async () => { const ns = {...settings, theme: 'dark' as const}; setSettings(ns); await invoke("update_settings", { newSettings: ns }); }}
                           className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.theme !== 'light' ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-500' : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20 hover:bg-white/10'}`}>
                           <span className="text-xl">🌙</span>
                           <span className="font-medium text-sm">Dark Mode</span>
                         </button>
                         <button 
-                          onClick={() => setSettings({...settings, theme: 'light'})}
+                          onClick={async () => { const ns = {...settings, theme: 'light' as const}; setSettings(ns); await invoke("update_settings", { newSettings: ns }); }}
                           className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.theme === 'light' ? 'bg-blue-500/20 border-blue-500/50 text-blue-600' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10'}`}>
                           <span className="text-xl">☀️</span>
                           <span className="font-medium text-sm">Light Mode</span>
@@ -1422,7 +1568,7 @@ function App() {
                           ].map(accent => (
                             <button
                               key={accent.id}
-                              onClick={() => setSettings({...settings, accent: accent.id as any})}
+                              onClick={async () => { const ns = {...settings, accent: accent.id as any}; setSettings(ns); await invoke("update_settings", { newSettings: ns }); }}
                               className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${settings.accent === accent.id ? 'border-white scale-110' : 'border-transparent'}`}
                               style={{ backgroundColor: accent.color }}
                               title={accent.name}
@@ -1433,7 +1579,49 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Hệ thống & Ngôn ngữ */}
+                  {/* Hệ thống & Khởi động */}
+                  <div className="glass-card rounded-2xl p-6 relative overflow-hidden group border border-white/5 hover:border-blue-500/30 transition-colors">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <Zap className="w-24 h-24" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-6 relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-white">{t("Hệ thống", "System")}</h2>
+                    </div>
+                    
+                    <div className="space-y-4 relative z-10">
+                      <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5">
+                        <div>
+                          <p className="text-sm font-medium text-white mb-1">{t("Khởi động cùng máy tính", "Start on Boot")}</p>
+                          <p className="text-xs text-gray-500">{t("Chạy ngầm ở System Tray khi mở máy", "Run in background on system startup")}</p>
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const { enable, disable } = await import('@tauri-apps/plugin-autostart');
+                              if (settings.auto_start) {
+                                await disable();
+                              } else {
+                                await enable();
+                              }
+                              const ns = {...settings, auto_start: !settings.auto_start};
+                              setSettings(ns);
+                              await invoke("update_settings", { newSettings: ns });
+                            } catch (e) {
+                              console.error("Autostart error:", e);
+                            }
+                          }}
+                          className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${settings.auto_start ? 'bg-blue-500' : 'bg-white/20'}`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${settings.auto_start ? 'translate-x-6.5' : 'translate-x-0.5'}`}></div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ngôn ngữ */}
                   <div className="glass-card rounded-2xl p-6 relative overflow-hidden group border border-white/5 hover:border-orange-500/30 transition-colors">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                       <Languages className="w-24 h-24" />
@@ -1448,15 +1636,15 @@ function App() {
                     <div className="space-y-4 relative z-10">
                       <div className="grid grid-cols-2 gap-3">
                         <button 
-                          onClick={() => setSettings({...settings, language: 'vi'})}
-                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.language === 'vi' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10'}`}
+                          onClick={async () => { const ns = {...settings, language: 'vi' as const}; setSettings(ns); await invoke("update_settings", { newSettings: ns }); }}
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${settings.language === 'vi' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10'}`}
                         >
                           <span className="text-xl">🇻🇳</span>
                           <span className="font-medium text-sm">Tiếng Việt</span>
                         </button>
                         <button 
-                          onClick={() => setSettings({...settings, language: 'en'})}
-                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.language === 'en' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10'}`}
+                          onClick={async () => { const ns = {...settings, language: 'en' as const}; setSettings(ns); await invoke("update_settings", { newSettings: ns }); }}
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${settings.language === 'en' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10'}`}
                         >
                           <span className="text-xl">🇺🇸</span>
                           <span className="font-medium text-sm">English</span>
@@ -1489,7 +1677,7 @@ function App() {
                       <img src="/app-icon.png" alt="App Icon" className="w-12 h-12" />
                     </div>
                     <h2 className="text-3xl font-bold mb-2">TichPhong Share</h2>
-                    <p className="text-tichphong-blue font-medium mb-6">Version 1.0.0 (Standalone)</p>
+                    <p className="text-tichphong-blue font-medium mb-6">Version 2.0.0 (Standalone)</p>
                     <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-2xl mx-auto">
                       {t("Ứng dụng chia sẻ file siêu tốc, hỗ trợ đa nền tảng và tích hợp sâu với hệ sinh thái TichPhong OS. Chia sẻ qua LocalSend, Quick Share và WebDAV.", "High-speed file sharing app, cross-platform support and deeply integrated with TichPhong OS ecosystem. Share via LocalSend, Quick Share and WebDAV.")}
                     </p>
@@ -1498,7 +1686,10 @@ function App() {
                         GitHub
                       </button>
                       <button onClick={() => setShowGuide(true)} className="bg-tichphong-blue/10 text-tichphong-blue hover:bg-tichphong-blue/20 border border-tichphong-blue/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer">
-                        <BookOpen className="w-4 h-4" /> User Guide
+                        <BookOpen className="w-4 h-4" /> {t("Chi tiết & Hướng dẫn", "Details & Guide")}
+                      </button>
+                      <button onClick={() => setShowChangelog(true)} className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10">
+                        <History className="w-4 h-4" /> {t("Lịch sử cập nhật", "Changelog")}
                       </button>
                       <button onClick={() => setShowDonate(true)} className="bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-500/10">
                         <Heart className="w-4 h-4" /> {t("Ủng hộ Dự án", "Donate")}
@@ -1663,7 +1854,7 @@ function App() {
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-[color:var(--color-white)]">{t("Sổ tay Hướng dẫn TichPhong Share", "TichPhong Share User Guide")}</h2>
-                        <p className="text-sm text-[color:var(--color-gray-400)]">{t("Cách sử dụng mọi tính năng", "How to use all features")} (Version 1.0.0)</p>
+                        <p className="text-sm text-[color:var(--color-gray-400)]">{t("Cách sử dụng mọi tính năng", "How to use all features")} (Version 2.0.0)</p>
                       </div>
                     </div>
                     <button type="button" onClick={() => setShowGuide(false)} className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer">
@@ -1693,10 +1884,10 @@ function App() {
                     </div>
                     
                     <div className="bg-white/5 p-5 rounded-xl border border-white/5">
-                      <h3 className="text-green-400 font-bold text-lg mb-2 flex items-center gap-2"><QrCode className="w-4 h-4" /> 3. WebShare ({t("Chia sẻ qua QR Code", "Share via QR Code")})</h3>
-                      <p className="mb-2">{t("Nếu không muốn cài thêm app, WebShare là giải pháp tối ưu.", "If you don't want to install additional apps, WebShare is the ultimate solution.")}</p>
+                      <h3 className="text-green-400 font-bold text-lg mb-2 flex items-center gap-2"><QrCode className="w-4 h-4" /> 3. QR Connect ({t("Giao thức TichPhong Direct", "TichPhong Direct Protocol")})</h3>
+                      <p className="mb-2">{t("Nếu không muốn cài thêm app, QR Connect (chạy trên giao thức độc quyền TichPhong Direct) là giải pháp tối ưu.", "If you don't want to install additional apps, QR Connect (powered by the exclusive TichPhong Direct protocol) is the ultimate solution.")}</p>
                       <ul className="list-disc pl-5 space-y-1 text-[color:var(--color-gray-400)]">
-                        <li>{t("Bấm \"Chọn file chia sẻ\" trong WebShare để chọn các file bạn muốn gửi.", "Click \"Select files to share\" in WebShare to choose the files you want to send.")}</li>
+                        <li>{t("Bấm \"Chọn file chia sẻ\" trong tab QR Connect để chọn các file bạn muốn gửi.", "Click \"Select files to share\" in the QR Connect tab to choose files to send.")}</li>
                         <li>{t("PC sẽ tạo một mã QR đặc biệt.", "The PC will generate a special QR code.")}</li>
                         <li>{t("Người nhận dùng Camera điện thoại quét mã QR. Safari hoặc Google Chrome sẽ mở ra trang tải file trực tiếp siêu tốc!", "The recipient scans the QR code with their mobile camera. Safari or Chrome will open a direct download page!")}</li>
                       </ul>
@@ -1715,6 +1906,70 @@ function App() {
                     <button type="button" onClick={() => setShowGuide(false)} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-8 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 cursor-pointer">
                       {t("Đã hiểu", "Understood")}
                     </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Changelog Modal */}
+          <AnimatePresence>
+            {showChangelog && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+              >
+                <motion.div 
+                  initial={{ scale: 0.95, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.95, y: 20 }}
+                  className="glass-card border border-white/10 rounded-2xl w-full max-w-2xl max-h-full overflow-hidden shadow-2xl flex flex-col"
+                >
+                  <div className="flex items-center justify-between p-6 border-b border-white/10 bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 border border-emerald-500/30">
+                        <History className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-white">{t("Lịch sử cập nhật", "Changelog")}</h2>
+                        <p className="text-sm text-gray-400">TichPhong Share Pro</p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setShowChangelog(false)} className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-6 text-sm text-white">
+                    <div className="relative pl-6 border-l-2 border-emerald-500/30 space-y-8">
+                      {/* v2.0.0 */}
+                      <div className="relative">
+                        <span className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-tichphong-surface"></span>
+                        <h3 className="text-emerald-400 font-bold text-lg mb-1">v2.0.0 - TichPhong Share Pro</h3>
+                        <p className="text-xs text-gray-500 mb-3">05/06/2026</p>
+                        <ul className="list-disc pl-5 space-y-2 text-gray-300">
+                          <li><span className="text-white font-medium">TichPhong Direct:</span> {t("Ra mắt giao thức độc quyền, chia sẻ file siêu tốc qua giao diện QR Connect mà không cần cài app.", "Launched exclusive protocol, high-speed file sharing via QR Connect interface without installing apps.")}</li>
+                          <li><span className="text-white font-medium">Quick Share:</span> {t("Hỗ trợ gửi nhận file với các thiết bị Android và Windows qua mDNS & BLE.", "Support file transfer with Android and Windows devices via mDNS & BLE.")}</li>
+                          <li><span className="text-white font-medium">Auto-start:</span> {t("Thêm tùy chọn khởi động cùng hệ thống.", "Added auto-start with system option.")}</li>
+                          <li><span className="text-white font-medium">Persistent History:</span> {t("Lưu trữ lịch sử giao dịch file vĩnh viễn.", "Permanent transfer history storage.")}</li>
+                          <li><span className="text-white font-medium">Responsive UI:</span> {t("Giao diện tối ưu hiển thị trên mọi kích thước màn hình PC.", "UI optimized for all PC screen sizes.")}</li>
+                        </ul>
+                      </div>
+                      
+                      {/* v1.0.0 */}
+                      <div className="relative opacity-60">
+                        <span className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-gray-500 ring-4 ring-tichphong-surface"></span>
+                        <h3 className="text-gray-400 font-bold text-lg mb-1">v1.0.0 - Stable Release</h3>
+                        <p className="text-xs text-gray-500 mb-3">15/05/2026</p>
+                        <ul className="list-disc pl-5 space-y-2 text-gray-300">
+                          <li>{t("Hỗ trợ LocalSend v2 đa nền tảng.", "Support cross-platform LocalSend v2.")}</li>
+                          <li>{t("Tích hợp máy chủ WebDAV cơ bản.", "Integrated basic WebDAV server.")}</li>
+                          <li>{t("Giao diện tối màu (Dark mode) mặc định.", "Default dark mode interface.")}</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               </motion.div>
@@ -1777,11 +2032,12 @@ function App() {
               "Initial", "SentUkeyClientInit", "SentUkeyClientFinish", "SentPairedKeyEncryption", "SentPairedKeyResult", "SentIntroduction"
             ].includes(qsTransfer.state) && (
               <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50 }}
-                className="absolute bottom-4 left-4 right-4 bg-tichphong-surface border border-tichphong-border p-4 rounded-xl shadow-2xl z-50 flex flex-col gap-3 backdrop-blur-xl"
+                initial={{ opacity: 0, y: -30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.95 }}
+                className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
               >
+              <div className="w-full max-w-lg bg-tichphong-surface border border-tichphong-border p-5 rounded-2xl shadow-2xl flex flex-col gap-3">
                 {/* Header */}
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -1864,6 +2120,7 @@ function App() {
                     </button>
                   </div>
                 )}
+              </div>
               </motion.div>
             )}
           </AnimatePresence>

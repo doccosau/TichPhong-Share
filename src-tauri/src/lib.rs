@@ -101,6 +101,14 @@ struct UploadQuery {
     token: String,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct TransferHistoryItem {
+    pub name: String,
+    pub device: String,
+    pub time: String,
+    pub direction: String, // "inbound" | "outbound"
+}
+
 fn default_theme() -> String {
     "light".to_string()
 }
@@ -122,6 +130,9 @@ pub struct ShareSettings {
     pub accent: String,
     #[serde(default = "default_language")]
     pub language: String,
+    pub auto_accept: Option<bool>,
+    #[serde(default)]
+    pub history: Vec<TransferHistoryItem>,
 }
 
 impl ShareSettings {
@@ -140,6 +151,8 @@ impl ShareSettings {
             theme: "light".to_string(),
             accent: "jade".to_string(),
             language: "vi".to_string(),
+            auto_accept: Some(false),
+            history: vec![],
         };
 
         if let Some(config_dir) =
@@ -184,7 +197,6 @@ struct ShareState {
     rqs_sender: tokio::sync::broadcast::Sender<ChannelMessage>,
     rqs_send_channel: AsyncMutex<Option<tokio::sync::mpsc::Sender<rqs_lib::SendInfo>>>,
     webdav_cancel: AsyncMutex<Option<tokio::sync::oneshot::Sender<()>>>,
-    webshare_cancel: AsyncMutex<Option<tokio::sync::oneshot::Sender<()>>>,
     qrc_state: AsyncMutex<Option<Arc<qrc::QrcState>>>,
 }
 
@@ -296,68 +308,6 @@ async fn stop_webdav(state: tauri::State<'_, Arc<ShareState>>) -> Result<(), Str
     Ok(())
 }
 
-#[tauri::command]
-async fn start_webshare(
-    files: Vec<String>,
-    state: tauri::State<'_, Arc<ShareState>>,
-) -> Result<u16, String> {
-    let mut cancel_guard = state.webshare_cancel.lock().await;
-    if let Some(tx) = cancel_guard.take() {
-        let _ = tx.send(());
-    }
-
-    let temp_dir = std::env::temp_dir().join("tichphong_webshare");
-    let _ = std::fs::remove_dir_all(&temp_dir);
-    std::fs::create_dir_all(&temp_dir).map_err(|e| e.to_string())?;
-
-    let mut html = String::from("<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>TichPhong WebShare</title><style>body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; } .file { padding: 15px; margin: 10px 0; background: #f0f0f0; border-radius: 8px; text-decoration: none; display: block; color: #333; font-weight: bold; } .file:hover { background: #e0e0e0; } .header { margin-bottom: 20px; color: #1a1a1a; }</style></head><body><h2 class='header'>TichPhong WebShare</h2><p>Vui lòng click vào các file bên dưới để tải về máy:</p>");
-
-    for file_path in files {
-        let path = std::path::Path::new(&file_path);
-        if let Some(file_name) = path.file_name() {
-            let file_name_str = file_name.to_string_lossy().to_string();
-            let dest_path = temp_dir.join(&file_name_str);
-            #[cfg(unix)]
-            let _ = std::os::unix::fs::symlink(&file_path, &dest_path);
-            #[cfg(windows)]
-            let _ = std::fs::copy(&file_path, &dest_path);
-
-            html.push_str(&format!(
-                "<a class='file' href='/files/{}' download>{}</a>",
-                file_name_str, file_name_str
-            ));
-        }
-    }
-    html.push_str("</body></html>");
-
-    let index_route = warp::path::end().map(move || warp::reply::html(html.clone()));
-
-    let files_route = warp::path("files").and(warp::fs::dir(temp_dir.clone()));
-    let routes = index_route.or(files_route);
-
-    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
-
-    let (_, server) =
-        warp::serve(routes).bind_with_graceful_shutdown(([0, 0, 0, 0], 8081), async {
-            rx.await.ok();
-        });
-
-    tokio::spawn(server);
-    *cancel_guard = Some(tx);
-
-    Ok(8081)
-}
-
-#[tauri::command]
-async fn stop_webshare(state: tauri::State<'_, Arc<ShareState>>) -> Result<(), String> {
-    let mut cancel_guard = state.webshare_cancel.lock().await;
-    if let Some(tx) = cancel_guard.take() {
-        let _ = tx.send(());
-    }
-    let temp_dir = std::env::temp_dir().join("tichphong_webshare");
-    let _ = std::fs::remove_dir_all(&temp_dir);
-    Ok(())
-}
 
 #[tauri::command]
 fn get_settings(state: tauri::State<'_, Arc<ShareState>>) -> ShareSettings {
@@ -819,20 +769,30 @@ fn reject_quickshare(id: String, state: tauri::State<'_, Arc<ShareState>>) {
 
 // --- QR Connect Tauri Commands ---
 
+#[derive(Serialize)]
+struct QrcStartResponse {
+    url: String,
+    wifi_qr: Option<String>,
+}
+
 #[tauri::command]
 async fn start_qr_connect(
+    mode: String,
     state: tauri::State<'_, Arc<ShareState>>,
-) -> Result<String, String> {
+) -> Result<QrcStartResponse, String> {
     // Stop existing QRC session if any
     let mut qrc_guard = state.qrc_state.lock().await;
     if let Some(ref existing) = *qrc_guard {
         qrc::stop(existing).await;
     }
 
-    let download_dir = { state.settings.lock().unwrap().download_dir.clone() };
-    let (url, _token, qrc_state) = qrc::start(state.app_handle.clone(), download_dir).await?;
+    let (download_dir, alias, theme, accent) = { 
+        let s = state.settings.lock().unwrap();
+        (s.download_dir.clone(), s.alias.clone(), s.theme.clone(), s.accent.clone())
+    };
+    let (url, _token, qrc_state, wifi_qr) = qrc::start(state.app_handle.clone(), download_dir, mode, alias, theme, accent).await?;
     *qrc_guard = Some(qrc_state);
-    Ok(url)
+    Ok(QrcStartResponse { url, wifi_qr })
 }
 
 #[tauri::command]
@@ -884,6 +844,19 @@ async fn qrc_reject_upload(
         Some(qrc_state) => qrc::reject_upload(qrc_state, upload_id).await,
         None => Err("QR Connect is not active".into()),
     }
+}
+
+#[tauri::command]
+async fn qrc_update_theme(
+    theme: String,
+    accent: String,
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<(), String> {
+    let qrc_guard = state.qrc_state.lock().await;
+    if let Some(qrc_state) = &*qrc_guard {
+        qrc::qrc_update_theme(qrc_state, theme, accent).await;
+    }
+    Ok(())
 }
 
 // --- Startup ---
@@ -1015,6 +988,7 @@ pub fn run() {
             let show_i = MenuItem::with_id(app, "show", "Mở TichPhong Share", true, None::<&str>)?;
             let send_i = MenuItem::with_id(app, "send", "Gửi File", true, None::<&str>)?;
             let receive_i = MenuItem::with_id(app, "receive", "Nhận File", true, None::<&str>)?;
+            let qrc_i = MenuItem::with_id(app, "qrconnect", "QR Connect", true, None::<&str>)?;
             let portal_i = MenuItem::with_id(app, "portal", "Device Portal", true, None::<&str>)?;
             let settings_i = MenuItem::with_id(app, "settings", "Cài đặt", true, None::<&str>)?;
             let separator = tauri::menu::PredefinedMenuItem::separator(app)?;
@@ -1026,6 +1000,7 @@ pub fn run() {
                     &separator,
                     &send_i,
                     &receive_i,
+                    &qrc_i,
                     &portal_i,
                     &settings_i,
                     &separator,
@@ -1047,7 +1022,7 @@ pub fn run() {
                             let _ = window.set_focus();
                         }
                     }
-                    id @ "send" | id @ "receive" | id @ "portal" | id @ "settings" => {
+                    id @ "send" | id @ "receive" | id @ "portal" | id @ "settings" | id @ "qrconnect" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
@@ -1097,7 +1072,6 @@ pub fn run() {
                 rqs_sender: rqs_tx.clone(),
                 rqs_send_channel: AsyncMutex::new(None),
                 webdav_cancel: AsyncMutex::new(None),
-                webshare_cancel: AsyncMutex::new(None),
                 qrc_state: AsyncMutex::new(None),
             });
 
@@ -1184,8 +1158,6 @@ pub fn run() {
             open_ftp,
             start_webdav,
             stop_webdav,
-            start_webshare,
-            stop_webshare,
             get_cli_args,
             accept_quickshare,
             reject_quickshare,
@@ -1194,7 +1166,8 @@ pub fn run() {
             stop_qr_connect,
             qrc_share_files,
             qrc_accept_upload,
-            qrc_reject_upload
+            qrc_reject_upload,
+            qrc_update_theme
         ])
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {
