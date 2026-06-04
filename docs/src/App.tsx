@@ -72,7 +72,7 @@ export default function App() {
               <span className="uppercase tracking-wider text-xs">V2.0.0 Coming Soon - Đột phá mới</span>
             </motion.div>
             
-            <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-black tracking-tighter text-tp-text mb-8 leading-[1.05] ">
+            <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-black tracking-tighter text-tp-text mb-8 leading-[1.05] font-serif">
               Vượt qua mọi <br className="hidden md:block"/>
               <span className="text-gradient drop-shadow-sm">
                 giới hạn truyền tải
@@ -111,15 +111,15 @@ export default function App() {
             className="mt-16 pt-8 border-t border-tp-primary/10 flex flex-wrap justify-center gap-12 text-center"
           >
              <div>
-                <div className="text-3xl font-black text-tp-text mb-1 ">50+</div>
+                <div className="text-3xl font-black text-tp-text mb-1 font-serif">50+</div>
                 <div className="text-sm font-medium text-tp-subtext uppercase tracking-wider">Lượt Tải</div>
              </div>
              <div>
-                <div className="text-3xl font-black text-tp-text mb-1 ">100%</div>
+                <div className="text-3xl font-black text-tp-text mb-1 font-serif">100%</div>
                 <div className="text-sm font-medium text-tp-subtext uppercase tracking-wider">Miễn phí</div>
              </div>
              <div>
-                <div className="text-3xl font-black text-tp-text mb-1 ">P2P</div>
+                <div className="text-3xl font-black text-tp-text mb-1 font-serif">P2P</div>
                 <div className="text-sm font-medium text-tp-subtext uppercase tracking-wider">Kết nối trực tiếp</div>
              </div>
           </motion.div>
@@ -175,7 +175,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16 relative z-10">
             <div className="text-tp-primary font-bold uppercase tracking-widest text-sm mb-3">Tính năng toàn diện</div>
-            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 tracking-tight ">Giải pháp <span className="text-gradient">hoàn hảo</span> cho bạn</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 tracking-tight font-serif">Giải pháp <span className="text-gradient">hoàn hảo</span> cho bạn</h2>
             <p className="text-xl text-tp-subtext max-w-2xl mx-auto font-medium">Được phát triển với mục tiêu thay thế hoàn toàn cáp truyền dữ liệu truyền thống.</p>
           </div>
 
@@ -199,7 +199,7 @@ export default function App() {
                 <div className="w-16 h-16 bg-gradient-to-br from-tp-primary/10 to-tp-accent/10 border border-white/80 shadow-sm rounded-2xl flex items-center justify-center mb-8 text-tp-primary group-hover:scale-110 transition-transform duration-300">
                   <feature.icon size={32} />
                 </div>
-                <h3 className="text-2xl font-bold text-tp-text mb-4 tracking-tight ">{feature.title}</h3>
+                <h3 className="text-2xl font-bold text-tp-text mb-4 tracking-tight font-serif">{feature.title}</h3>
                 <p className="text-tp-subtext leading-relaxed font-medium">{feature.desc}</p>
               </motion.div>
             ))}
@@ -212,7 +212,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <div className="text-tp-primary font-bold uppercase tracking-widest text-sm mb-3">Dễ sử dụng</div>
-            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 ">Chỉ với 3 bước đơn giản</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 font-serif">Chỉ với 3 bước đơn giản</h2>
             <p className="text-lg text-tp-subtext max-w-2xl mx-auto font-medium">Bạn không cần phải thiết lập phức tạp, ứng dụng tự động dò tìm thiết bị xung quanh.</p>
           </div>
           
@@ -227,7 +227,7 @@ export default function App() {
                   <Wifi size={20} />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-tp-text mb-3 ">Kết nối mạng</h3>
+              <h3 className="text-2xl font-bold text-tp-text mb-3 font-serif">Kết nối mạng</h3>
               <p className="text-tp-subtext">Đảm bảo máy tính và điện thoại của bạn đang kết nối vào chung một mạng Wi-Fi (hoặc phát Hotspot).</p>
             </div>
             
@@ -238,7 +238,7 @@ export default function App() {
                   <MonitorSmartphone size={20} />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-tp-text mb-3 ">Mở Ứng Dụng</h3>
+              <h3 className="text-2xl font-bold text-tp-text mb-3 font-serif">Mở Ứng Dụng</h3>
               <p className="text-tp-subtext">Khởi chạy TichPhong Share. Ứng dụng sẽ tự động phát hiện các thiết bị lân cận đang mở app tương tự.</p>
             </div>
             
@@ -249,7 +249,7 @@ export default function App() {
                   <Share2 size={20} />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-tp-text mb-3 ">Kéo & Thả</h3>
+              <h3 className="text-2xl font-bold text-tp-text mb-3 font-serif">Kéo & Thả</h3>
               <p className="text-tp-subtext">Chọn thiết bị, kéo thả file vào cửa sổ. File sẽ bay tới đích với tốc độ cực nhanh trong chớp mắt.</p>
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function App() {
       <section id="faq" className="py-24 relative z-10 bg-tp-base">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-black text-tp-text mb-4 ">Câu hỏi thường gặp</h2>
+            <h2 className="text-4xl font-black text-tp-text mb-4 font-serif">Câu hỏi thường gặp</h2>
             <p className="text-tp-subtext font-medium">Những vấn đề người dùng hay thắc mắc nhất</p>
           </div>
           
@@ -295,7 +295,7 @@ export default function App() {
             <div className="absolute -top-40 -right-40 w-96 h-96 bg-tp-primary/10 rounded-full blur-3xl"></div>
             <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-tp-accent/10 rounded-full blur-3xl"></div>
             
-            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 ">Sẵn sàng trải nghiệm?</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 font-serif">Sẵn sàng trải nghiệm?</h2>
             <p className="text-xl text-tp-subtext mb-12 max-w-2xl mx-auto font-medium">
               Tải xuống bản ổn định ngay hôm nay, hoặc đón chờ phiên bản 2.0.0 cực khủng với tính năng QR Connect.
             </p>
@@ -338,7 +338,7 @@ export default function App() {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
                 <img src="/logo.png" alt="TichPhong Share Logo" className="w-10 h-10 drop-shadow-md rounded-xl" />
-                <span className="text-2xl font-black text-tp-text tracking-tight ">TichPhong Share</span>
+                <span className="text-2xl font-black text-tp-text tracking-tight font-serif">TichPhong Share</span>
               </div>
               <p className="text-tp-subtext font-medium mb-6 max-w-sm">Phần mềm chia sẻ dữ liệu mã nguồn mở miễn phí. Tiên phong giải pháp P2P tốc độ cao và bảo mật nội bộ do cộng đồng TichPhong OS đóng góp.</p>
               <div className="flex gap-4">
