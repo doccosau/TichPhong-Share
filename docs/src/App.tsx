@@ -42,11 +42,7 @@ export default function App() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-tp-primary/10 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-tp-primary via-tp-secondary to-tp-accent flex items-center justify-center shadow-lg shadow-tp-primary/30 p-0.5">
-              <div className="w-full h-full bg-tp-surface rounded-[14px] flex items-center justify-center">
-                <Share2 size={24} className="text-tp-primary" />
-              </div>
-            </div>
+            <img src="/logo.png" alt="TichPhong Share Logo" className="w-12 h-12 drop-shadow-md rounded-2xl" />
             <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-tp-primary to-tp-accent">TichPhong Share</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
@@ -341,9 +337,7 @@ export default function App() {
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-tp-primary to-tp-accent flex items-center justify-center shadow-lg shadow-tp-primary/20">
-                    <Share2 size={20} className="text-white" />
-                </div>
+                <img src="/logo.png" alt="TichPhong Share Logo" className="w-10 h-10 drop-shadow-md rounded-xl" />
                 <span className="text-2xl font-black text-tp-text tracking-tight font-serif">TichPhong Share</span>
               </div>
               <p className="text-tp-subtext font-medium mb-6 max-w-sm">Phần mềm chia sẻ dữ liệu mã nguồn mở miễn phí. Tiên phong giải pháp P2P tốc độ cao và bảo mật nội bộ do cộng đồng TichPhong OS đóng góp.</p>
