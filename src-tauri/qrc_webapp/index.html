@@ -154,11 +154,16 @@
 <div id="toast-container"></div>
 
 <header class="header">
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-      <img src="/qrc/assets/icon.png" alt="TichPhong Share" style="width: 100%; height: 100%; object-fit: contain;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+        <img src="/qrc/assets/icon.png" alt="TichPhong Share" style="width: 100%; height: 100%; object-fit: contain;">
+      </div>
+      <div class="header-title">TichPhong Share</div>
     </div>
-    <div class="header-title">TichPhong Share</div>
+    <button onclick="switchTab('settings')" style="background:transparent; border:none; color:var(--tp-text-muted); cursor:pointer; padding: 4px; display: flex; align-items: center; justify-content: center;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
   </div>
   <div class="status-row">
     <div class="alias">
@@ -166,7 +171,7 @@
       {{ALIAS}}
     </div>
     <div class="badge" id="status-badge">
-      <div class="dot pulse"></div> Đang kết nối
+      <div class="dot pulse"></div> <span data-i18n="connecting">Đang kết nối</span>
     </div>
   </div>
 </header>
@@ -176,10 +181,10 @@
   <!-- Tab: Nhận File -->
   <div id="tab-receive" class="tab-content active">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-      <h2 style="font-size: 16px;">Từ PC của bạn</h2>
+      <h2 style="font-size: 16px;" data-i18n="from_pc">Từ PC của bạn</h2>
       <button class="btn btn-primary" style="padding: 8px 14px; font-size: 13px;" onclick="downloadAll()" id="btn-download-all" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Tải tất cả
+        <span data-i18n="download_all">Tải tất cả</span>
       </button>
     </div>
     <div class="file-list" id="file-list">
@@ -200,15 +205,15 @@
     <input type="file" id="file-input" multiple style="display: none;">
     <button class="btn btn-outline" style="width: 100%; border-style: dashed; padding: 24px;" onclick="document.getElementById('file-input').click()">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Chọn File hoặc Ảnh
+      <span data-i18n="select_file">Chọn File hoặc Ảnh</span>
     </button>
     
     <div id="preview-section" style="display:none;">
-      <h3 style="font-size: 14px; color: var(--tp-text-muted); margin-top: 8px;" id="preview-count">Đã chọn 0 file</h3>
+      <h3 style="font-size: 14px; color: var(--tp-text-muted); margin-top: 8px;" id="preview-count" data-i18n="selected_count">Đã chọn 0 file</h3>
       <div class="preview-grid" id="preview-grid"></div>
       <button class="btn btn-primary" style="width: 100%; margin-top: 16px;" onclick="startUploads()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        Gửi sang PC
+        <span data-i18n="send_to_pc">Gửi sang PC</span>
       </button>
     </div>
 
@@ -301,10 +306,6 @@
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     <span data-i18n="nav_send">Gửi File</span>
   </button>
-  <button class="nav-item" onclick="switchTab('settings')" id="nav-settings">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    <span data-i18n="nav_settings">Cài đặt</span>
-  </button>
 </nav>
 
 <script>
@@ -339,13 +340,13 @@ const i18n = {
     lang_title: 'Ngôn ngữ', lang_label: 'Ngôn ngữ giao diện', lang_desc: 'Thay đổi ngôn ngữ hiển thị',
     conn_title: 'Kết nối', conn_pc: 'Máy tính đang kết nối', conn_server: 'Địa chỉ máy chủ', conn_protocol: 'Giao thức',
     about_title: 'Thông tin', about_desc: 'Chia sẻ file không cần cài đặt',
-    select_file: 'Chọn File hoặc Ảnh', send_to_pc: 'Gửi sang PC',
+    select_file: 'Chọn File hoặc Ảnh', send_to_pc: 'Gửi sang PC', from_pc: 'Từ PC của bạn',
     selected_count: 'Đã chọn {n} file',
     empty_no_files: 'PC hiện không share file nào.',
     empty_hint: 'Hãy kéo thả file vào TichPhong Share trên PC.',
     download_all: 'Tải tất cả (ZIP)',
     downloading: 'Đang tải xuống...', zipping: 'Đang nén và tải toàn bộ...',
-    sent_ok: 'Gửi thành công', sent_err: 'Lỗi', network_err: 'Mất mạng',
+    sent_ok: 'Gửi thành công', sent_err: 'Lỗi', network_err: 'Mất mạng', waiting_pc: 'Chờ PC duyệt...',
     sent_toast: 'Đã gửi', pc_refresh: 'PC vừa làm mới file!',
     pc_accepted: 'PC đã chấp nhận, đang truyền...', pc_rejected: 'PC đã từ chối file này!',
     connecting: 'Đang kết nối', connected: 'Đã kết nối', disconnected: 'Mất kết nối'
@@ -355,13 +356,13 @@ const i18n = {
     lang_title: 'Language', lang_label: 'Interface Language', lang_desc: 'Change display language',
     conn_title: 'Connection', conn_pc: 'Connected PC', conn_server: 'Server Address', conn_protocol: 'Protocol',
     about_title: 'About', about_desc: 'Share files without installing apps',
-    select_file: 'Select Files or Photos', send_to_pc: 'Send to PC',
+    select_file: 'Select Files or Photos', send_to_pc: 'Send to PC', from_pc: 'From your PC',
     selected_count: '{n} file(s) selected',
     empty_no_files: 'PC is not sharing any files.',
     empty_hint: 'Drag files into TichPhong Share on PC.',
     download_all: 'Download All (ZIP)',
     downloading: 'Downloading...', zipping: 'Compressing and downloading...',
-    sent_ok: 'Sent successfully', sent_err: 'Error', network_err: 'Network error',
+    sent_ok: 'Sent successfully', sent_err: 'Error', network_err: 'Network error', waiting_pc: 'Waiting for PC...',
     sent_toast: 'Sent', pc_refresh: 'PC refreshed files!',
     pc_accepted: 'PC accepted, transferring...', pc_rejected: 'PC rejected this file!',
     connecting: 'Connecting', connected: 'Connected', disconnected: 'Disconnected'
@@ -378,11 +379,25 @@ function setLang(lang) {
     const key = el.getAttribute('data-i18n');
     if (i18n[lang][key]) el.textContent = i18n[lang][key];
   });
-  // Update dynamic elements
-  const selectBtn = document.querySelector('#tab-send .btn-outline');
-  if (selectBtn) selectBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> ${tl('select_file')}`;
-  const sendBtn = document.querySelector('#tab-send .btn-primary');
-  if (sendBtn) sendBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> ${tl('send_to_pc')}`;
+  
+  // Re-render UI that relies on translation
+  if (selectedFiles.length > 0) {
+    const countEl = document.getElementById('preview-count');
+    if (countEl) countEl.textContent = tl('selected_count').replace('{n}', selectedFiles.length);
+  }
+  
+  // Also translate connection badge if it's rendered
+  const badge = document.getElementById('status-badge');
+  if (badge) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      badge.innerHTML = `<div class="dot"></div> ${tl('connected')}`;
+    } else if (!ws || ws.readyState === WebSocket.CONNECTING) {
+      badge.innerHTML = `<div class="dot pulse"></div> ${tl('connecting')}`;
+    } else {
+      badge.innerHTML = `<div class="dot"></div> ${tl('disconnected')}`;
+    }
+  }
+  
   localStorage.setItem('tp_lang', lang);
 }
 
@@ -457,13 +472,13 @@ function connectWebSocket() {
 
   const badge = document.getElementById('status-badge');
   badge.className = 'badge warning';
-  badge.innerHTML = '<div class="dot pulse"></div> Đang kết nối';
+  badge.innerHTML = `<div class="dot pulse"></div> ${tl('connecting')}`;
 
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
     badge.className = 'badge';
-    badge.innerHTML = '<div class="dot"></div> Đã kết nối';
+    badge.innerHTML = `<div class="dot"></div> ${tl('connected')}`;
     if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
     
     // Send Device Info for Recognition
@@ -480,18 +495,19 @@ function connectWebSocket() {
       const event = JSON.parse(e.data);
       if (event.type === 'files_available') {
         renderFiles(event.files || []);
-        showToast("PC vừa làm mới file!");
+        showToast(tl('pc_refresh'));
       }
       if (event.type === 'upload_accepted') {
         const el = document.getElementById(`status-text-${event.id}`);
-        if(el) el.textContent = 'PC đã chấp nhận, đang truyền...';
+        if(el) el.textContent = tl('pc_accepted');
       }
       if (event.type === 'upload_rejected') {
         const el = document.getElementById(`upload-item-${event.id}`);
         if(el) {
-          el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ PC đã từ chối file này!</div>`;
+          el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ ${tl('pc_rejected')}</div>`;
           setTimeout(()=>el.remove(), 4000);
         }
+      }
       if (event.type === 'theme_update') {
         const root = document.documentElement;
         if (event.theme === 'dark') {
@@ -528,7 +544,7 @@ function connectWebSocket() {
 
   ws.onclose = () => {
     badge.className = 'badge error';
-    badge.innerHTML = '<div class="dot"></div> Mất kết nối';
+    badge.innerHTML = `<div class="dot"></div> ${tl('disconnected')}`;
     if (!reconnectTimer) reconnectTimer = setInterval(() => connectWebSocket(), 3000);
   };
   ws.onerror = () => ws.close();
@@ -554,7 +570,7 @@ function renderFiles(files) {
     container.innerHTML = `
       <div class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        <p>PC hiện không share file nào.<br>Hãy kéo thả file vào TichPhong Share trên PC.</p>
+        <p>${tl('empty_no_files')}<br>${tl('empty_hint')}</p>
       </div>`;
     return;
   }
@@ -580,7 +596,7 @@ function downloadFile(id, name) {
   a.href = `${API_BASE}/qrc/download/${id}?token=${TOKEN}`;
   a.download = name;
   a.click();
-  showToast("Đang tải xuống...");
+  showToast(tl('downloading'));
 }
 
 function downloadAll() {
@@ -588,7 +604,7 @@ function downloadAll() {
   a.href = `${API_BASE}/qrc/download_all?token=${TOKEN}`;
   a.download = "TichPhong_Share.zip";
   a.click();
-  showToast("Đang nén và tải toàn bộ...");
+  showToast(tl('zipping'));
 }
 
 // --- SEND FILES (WITH PREVIEW) ---
@@ -612,7 +628,7 @@ function renderPreviews() {
   }
   
   section.style.display = 'block';
-  count.textContent = `Đã chọn ${selectedFiles.length} file`;
+  count.textContent = tl('selected_count').replace('{n}', selectedFiles.length);
   
   grid.innerHTML = selectedFiles.map((file, index) => {
     let content = '';
@@ -659,7 +675,7 @@ async function startUploads() {
     el.innerHTML = `
       <div class="progress-header">
         <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 60%;">${escapeHtml(file.name)}</span>
-        <span id="status-text-${uploadId}" style="color:var(--tp-accent)">Chờ PC duyệt...</span>
+        <span id="status-text-${uploadId}" style="color:var(--tp-accent)">${tl('waiting_pc')}</span>
       </div>
       <div class="progress-bar-container">
         <div class="progress-fill" id="fill-${uploadId}"></div>
@@ -687,17 +703,17 @@ async function startUploads() {
       
       xhr.onload = () => {
         if (xhr.status === 200) {
-          el.innerHTML = `<div class="progress-header" style="color:var(--tp-accent)">✅ Gửi thành công: ${escapeHtml(file.name)}</div>`;
-          showToast(`Đã gửi: ${file.name}`);
+          el.innerHTML = `<div class="progress-header" style="color:var(--tp-accent)">✅ ${tl('sent_ok')}: ${escapeHtml(file.name)}</div>`;
+          showToast(`${tl('sent_toast')}: ${file.name}`);
         } else {
-          el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ Lỗi: ${escapeHtml(file.name)}</div>`;
+          el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ ${tl('sent_err')}: ${escapeHtml(file.name)}</div>`;
         }
         setTimeout(() => el.remove(), 4000);
         resolve();
       };
       
       xhr.onerror = () => {
-        el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ Mất mạng: ${escapeHtml(file.name)}</div>`;
+        el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ ${tl('network_err')}: ${escapeHtml(file.name)}</div>`;
         setTimeout(() => el.remove(), 4000);
         resolve();
       };
