@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isPermissionGranted, requestPermission, sendNotification, onAction } from '@tauri-apps/plugin-notification';
-import { open } from '@tauri-apps/plugin-opener';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw, Zap, History } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -1683,7 +1683,7 @@ function App() {
                       {t("Ứng dụng chia sẻ file siêu tốc, hỗ trợ đa nền tảng và tích hợp sâu với hệ sinh thái TichPhong OS. Chia sẻ qua LocalSend, Quick Share, WebDAV và QR Connect (TichPhong Direct).", "High-speed file sharing app, cross-platform support and deeply integrated with TichPhong OS ecosystem. Share via LocalSend, Quick Share, WebDAV and QR Connect (TichPhong Direct).")}
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-4">
-                      <button onClick={() => open('https://github.com/doccosau/TichPhong-Share')} className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer">
+                      <button onClick={() => openUrl('https://github.com/doccosau/TichPhong-Share')} className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer">
                         GitHub
                       </button>
                       <button onClick={() => setShowGuide(true)} className="bg-tichphong-blue/10 text-tichphong-blue hover:bg-tichphong-blue/20 border border-tichphong-blue/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer">
@@ -1706,7 +1706,7 @@ function App() {
                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 bg-tichphong-blue/10 border border-tichphong-blue/30 rounded-xl p-5 w-full max-w-md flex flex-col items-center">
                         <p className="font-bold text-white mb-2">{t("Đã có phiên bản mới: ", "New version available: ")} v{latestVersion}</p>
                         <p className="text-xs text-gray-400 mb-4">{t("Truy cập GitHub để tải bản cài đặt tương thích với thiết bị của bạn.", "Go to GitHub to download the compatible installer for your device.")}</p>
-                        <button onClick={() => open(releaseUrl)} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 w-full flex items-center justify-center gap-2 cursor-pointer">
+                        <button onClick={() => openUrl(releaseUrl)} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 w-full flex items-center justify-center gap-2 cursor-pointer">
                           <Download className="w-4 h-4" /> {t("Tải về ngay", "Download Now")}
                         </button>
                       </motion.div>
