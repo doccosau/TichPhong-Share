@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isPermissionGranted, requestPermission, sendNotification, onAction } from '@tauri-apps/plugin-notification';
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages } from "lucide-react";
+import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart } from "lucide-react";
 import QRCode from "react-qr-code";
 import "./App.css";
 
@@ -166,6 +166,7 @@ function App() {
   const [webshareStatus, setWebshareStatus] = useState(false);
   const [websharePort, setWebsharePort] = useState(8081);
   const [showGuide, setShowGuide] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
 
   const t = (vi: string, en: string) => settings.language === 'en' ? en : vi;
 
@@ -1225,50 +1226,30 @@ function App() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="glass-card rounded-2xl p-6 border border-white/5 hover:border-pink-500/30 transition-colors flex flex-col items-center text-center">
+                <div className="flex flex-col gap-6">
+                  <div className="glass-card rounded-2xl p-8 border border-white/5 transition-colors flex flex-col items-center text-center">
                     <div className="w-24 h-24 bg-gradient-to-br from-tichphong-blue to-purple-500 rounded-3xl shadow-lg flex items-center justify-center mb-6 shadow-tichphong-blue/20">
                       <img src="/app-icon.png" alt="App Icon" className="w-12 h-12" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">TichPhong Share</h2>
-                    <p className="text-tichphong-blue font-medium mb-4">Version 1.0.0 (Standalone)</p>
-                    <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                    <h2 className="text-3xl font-bold mb-2">TichPhong Share</h2>
+                    <p className="text-tichphong-blue font-medium mb-6">Version 1.0.0 (Standalone)</p>
+                    <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-2xl mx-auto">
                       {t("Ứng dụng chia sẻ file siêu tốc, hỗ trợ đa nền tảng và tích hợp sâu với hệ sinh thái TichPhong OS. Chia sẻ qua LocalSend, Quick Share và WebDAV.", "High-speed file sharing app, cross-platform support and deeply integrated with TichPhong OS ecosystem. Share via LocalSend, Quick Share and WebDAV.")}
                     </p>
-                    <div className="flex gap-4 w-full">
-                      <button onClick={() => window.open('https://github.com/tichphong', '_blank')} className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer">
+                    <div className="flex flex-wrap items-center justify-center gap-4">
+                      <button onClick={() => window.open('https://github.com/doccosau/TichPhong-Share', '_blank')} className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer">
                         GitHub
                       </button>
-                      <button onClick={() => setShowGuide(true)} className="flex-1 bg-tichphong-blue/10 text-tichphong-blue hover:bg-tichphong-blue/20 border border-tichphong-blue/20 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer">
+                      <button onClick={() => setShowGuide(true)} className="bg-tichphong-blue/10 text-tichphong-blue hover:bg-tichphong-blue/20 border border-tichphong-blue/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer">
                         <BookOpen className="w-4 h-4" /> User Guide
+                      </button>
+                      <button onClick={() => setShowDonate(true)} className="bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-500/10">
+                        <Heart className="w-4 h-4" /> {t("Ủng hộ Dự án", "Donate")}
                       </button>
                     </div>
                   </div>
-
-                  <div className="glass-card rounded-2xl p-6 border border-white/5 hover:border-rose-500/30 transition-colors flex flex-col items-center justify-center text-center">
-                      <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                        <span className="text-2xl">☕</span> {t("Ủng hộ Dự án", "Support the Project")}
-                      </h3>
-                      <p className="text-sm text-gray-400 mb-4 px-2">
-                         {t("Nếu bạn thấy TichPhong Share hữu ích, hãy ủng hộ để giúp chúng tôi duy trì và phát triển dự án nhé!", "If you find TichPhong Share useful, please consider supporting the project!")}
-                      </p>
-                      <div className="bg-white rounded-2xl p-4 mb-4">
-                        <img src="https://api.vietqr.io/image/970423-93150637084-0dUeQ0W.jpg?accountName=DO%20CHI%20DANH&amount=0" alt="VietQR" className="w-full max-w-[200px] mx-auto rounded-xl" />
-                      </div>
-                      
-                      <div className="bg-white/5 rounded-xl p-4 border border-white/10 w-full">
-                        <p className="text-sm text-gray-400 mb-1">TPBank - <span className="font-bold text-white">DO CHI DANH</span></p>
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <p className="font-mono text-xl text-rose-400 font-bold tracking-wider">93150637084</p>
-                          <button onClick={() => navigator.clipboard.writeText('93150637084')} className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-gray-300 cursor-pointer">
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500">{t("Quét mã bằng app ngân hàng", "Scan with banking app")}</p>
-                      </div>
-                  </div>
                   
-                  <div className="md:col-span-2 glass-card rounded-2xl p-6 border border-white/5 text-center flex flex-col items-center">
+                  <div className="glass-card rounded-2xl p-6 border border-white/5 text-center flex flex-col items-center">
                      <p className="text-sm text-gray-400 mb-2">{t("Ghi công (Credits)", "Credits")}</p>
                      <p className="text-xs text-gray-500 max-w-2xl mb-4">
                         Powered by Tauri v2 & React. Built by TichPhong OS Team.<br/>
@@ -1462,6 +1443,56 @@ function App() {
                     <button type="button" onClick={() => setShowGuide(false)} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-8 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 cursor-pointer">
                       {t("Đã hiểu", "Understood")}
                     </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Donate Modal */}
+          <AnimatePresence>
+            {showDonate && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4"
+              >
+                <motion.div 
+                  initial={{ scale: 0.95, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.95, y: 20 }}
+                  className="glass-card border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col relative"
+                >
+                  <button type="button" onClick={() => setShowDonate(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-gray-300 hover:text-white transition-colors cursor-pointer z-10">
+                    <X className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="bg-gradient-to-br from-rose-500/20 to-pink-500/5 p-8 flex flex-col items-center justify-center text-center border-b border-white/5">
+                      <div className="w-16 h-16 bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-400 mb-4 shadow-lg shadow-rose-500/20">
+                        <Heart className="w-8 h-8" fill="currentColor" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">{t("Ủng hộ Dự án", "Support the Project")}</h3>
+                      <p className="text-sm text-gray-400">
+                         {t("Cảm ơn bạn đã đồng hành. Sự ủng hộ của bạn là động lực lớn nhất của chúng tôi!", "Thank you for your support. Your support means the world to us!")}
+                      </p>
+                  </div>
+                  
+                  <div className="p-6 bg-white/5 flex flex-col items-center">
+                      <div className="bg-white rounded-2xl p-4 mb-5 shadow-xl transition-transform hover:scale-105">
+                        <img src="https://api.vietqr.io/image/970423-93150637084-0dUeQ0W.jpg?accountName=DO%20CHI%20DANH&amount=0" alt="VietQR" className="w-48 h-48 object-cover rounded-xl" />
+                      </div>
+                      
+                      <div className="bg-black/20 rounded-xl p-4 border border-white/10 w-full text-center">
+                        <p className="text-xs text-gray-400 mb-1 uppercase tracking-wider font-medium">Ngân hàng TPBank</p>
+                        <p className="text-sm text-white font-bold mb-2">DO CHI DANH</p>
+                        <div className="flex items-center justify-center gap-2">
+                          <p className="font-mono text-xl text-rose-400 font-bold tracking-wider">93150637084</p>
+                          <button onClick={() => navigator.clipboard.writeText('93150637084')} className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-gray-300 cursor-pointer" title="Sao chép STK">
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                   </div>
                 </motion.div>
               </motion.div>
