@@ -1027,7 +1027,7 @@ function App() {
                     <Zap className="w-8 h-8 text-tichphong-blue" />
                     QR Connect
                   </h1>
-                  <p className="text-gray-400">{t("Quét mã QR để kết nối điện thoại — chia sẻ file 2 chiều qua trình duyệt, không cần cài app.", "Scan QR to connect phone — share files bidirectionally via browser, no app needed.")}</p>
+                  <p className="text-gray-400">{t("Quét mã QR để kết nối điện thoại, chia sẻ file 2 chiều qua trình duyệt, không cần cài app.", "Scan QR to connect phone, share files bidirectionally via browser, no app needed.")}</p>
                 </div>
 
                     {/* Start/Stop + QR Code */}
@@ -1207,7 +1207,7 @@ function App() {
                         <div className="w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center animate-bounce"><Download className="w-5 h-5" /></div>
                         <div>
                           <h2 className="font-bold text-yellow-400 text-base">{t("📱 File từ thiết bị di động", "📱 Files from Mobile")}</h2>
-                          <p className="text-xs text-gray-400">{t("Có file chờ duyệt — vui lòng chấp nhận hoặc từ chối", "Pending files — please accept or decline")}</p>
+                          <p className="text-xs text-gray-400">{t("Có file chờ duyệt, vui lòng chấp nhận hoặc từ chối", "Pending files, please accept or decline")}</p>
                         </div>
                       </div>
                       <div className="p-4 flex flex-col gap-3 max-h-[60vh] overflow-y-auto">
