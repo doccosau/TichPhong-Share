@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-tp-base: #f4fbf7;
-  --color-tp-surface: #ffffff;
-  --color-tp-overlay: #e5f3eb;
-  --color-tp-text: #062a1c;
-  --color-tp-subtext: #446857;
-  --color-tp-primary: #059669;
-  --color-tp-secondary: #10b981;
-  --color-tp-accent: #0ea5e9;
+  --color-tp-base: #020617; /* Dark slate */
+  --color-tp-surface: #0f172a; /* Slate 900 */
+  --color-tp-overlay: #1e293b; /* Slate 800 */
+  --color-tp-text: #f8fafc; /* Slate 50 */
+  --color-tp-subtext: #94a3b8; /* Slate 400 */
+  --color-tp-primary: #10b981; /* Emerald 500 */
+  --color-tp-secondary: #059669; /* Emerald 600 */
+  --color-tp-accent: #3b82f6; /* Blue 500 */
 }
 
 @layer base {
   body {
     background-color: var(--color-tp-base);
     color: var(--color-tp-text);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -24,24 +24,24 @@
 
 @layer utilities {
   .glass {
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
   
   .glass-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.7) 100%);
     backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 8px 32px 0 rgba(5, 150, 105, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
   
   .glass-card:hover {
     transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 40px -10px rgba(5, 150, 105, 0.2);
-    border-color: rgba(5, 150, 105, 0.4);
+    box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
   }
 
   .text-gradient {
