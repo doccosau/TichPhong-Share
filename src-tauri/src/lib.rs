@@ -1,3 +1,5 @@
+mod qrc;
+
 use axum::{
     body::Body,
     extract::{Query, State as AxumState},
@@ -183,6 +185,7 @@ struct ShareState {
     rqs_send_channel: AsyncMutex<Option<tokio::sync::mpsc::Sender<rqs_lib::SendInfo>>>,
     webdav_cancel: AsyncMutex<Option<tokio::sync::oneshot::Sender<()>>>,
     webshare_cancel: AsyncMutex<Option<tokio::sync::oneshot::Sender<()>>>,
+    qrc_state: AsyncMutex<Option<Arc<qrc::QrcState>>>,
 }
 
 #[tauri::command]
@@ -814,6 +817,75 @@ fn reject_quickshare(id: String, state: tauri::State<'_, Arc<ShareState>>) {
     let _ = state.rqs_sender.send(msg);
 }
 
+// --- QR Connect Tauri Commands ---
+
+#[tauri::command]
+async fn start_qr_connect(
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<String, String> {
+    // Stop existing QRC session if any
+    let mut qrc_guard = state.qrc_state.lock().await;
+    if let Some(ref existing) = *qrc_guard {
+        qrc::stop(existing).await;
+    }
+
+    let download_dir = { state.settings.lock().unwrap().download_dir.clone() };
+    let (url, _token, qrc_state) = qrc::start(state.app_handle.clone(), download_dir).await?;
+    *qrc_guard = Some(qrc_state);
+    Ok(url)
+}
+
+#[tauri::command]
+async fn stop_qr_connect(
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<(), String> {
+    let mut qrc_guard = state.qrc_state.lock().await;
+    if let Some(ref existing) = *qrc_guard {
+        qrc::stop(existing).await;
+    }
+    *qrc_guard = None;
+    Ok(())
+}
+
+#[tauri::command]
+async fn qrc_share_files(
+    file_paths: Vec<String>,
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<(), String> {
+    let qrc_guard = state.qrc_state.lock().await;
+    match &*qrc_guard {
+        Some(qrc_state) => {
+            qrc::share_files(qrc_state, file_paths).await;
+            Ok(())
+        }
+        None => Err("QR Connect is not active".into()),
+    }
+}
+
+#[tauri::command]
+async fn qrc_accept_upload(
+    upload_id: String,
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<(), String> {
+    let qrc_guard = state.qrc_state.lock().await;
+    match &*qrc_guard {
+        Some(qrc_state) => qrc::accept_upload(qrc_state, upload_id).await,
+        None => Err("QR Connect is not active".into()),
+    }
+}
+
+#[tauri::command]
+async fn qrc_reject_upload(
+    upload_id: String,
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<(), String> {
+    let qrc_guard = state.qrc_state.lock().await;
+    match &*qrc_guard {
+        Some(qrc_state) => qrc::reject_upload(qrc_state, upload_id).await,
+        None => Err("QR Connect is not active".into()),
+    }
+}
+
 // --- Startup ---
 
 async fn start_http_server(state: Arc<ShareState>) {
@@ -1026,6 +1098,7 @@ pub fn run() {
                 rqs_send_channel: AsyncMutex::new(None),
                 webdav_cancel: AsyncMutex::new(None),
                 webshare_cancel: AsyncMutex::new(None),
+                qrc_state: AsyncMutex::new(None),
             });
 
             app.manage(share_state.clone());
@@ -1116,7 +1189,12 @@ pub fn run() {
             get_cli_args,
             accept_quickshare,
             reject_quickshare,
-            send_quickshare
+            send_quickshare,
+            start_qr_connect,
+            stop_qr_connect,
+            qrc_share_files,
+            qrc_accept_upload,
+            qrc_reject_upload
         ])
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {

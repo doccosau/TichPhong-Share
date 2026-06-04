@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isPermissionGranted, requestPermission, sendNotification, onAction } from '@tauri-apps/plugin-notification';
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw } from "lucide-react";
+import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw, Zap } from "lucide-react";
 import QRCode from "react-qr-code";
 import "./App.css";
 
@@ -78,7 +78,7 @@ const getQSStateText = (state: string, isOutbound?: boolean) => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"send" | "receive" | "settings" | "portal" | "about">("send");
+  const [activeTab, setActiveTab] = useState<"send" | "receive" | "settings" | "portal" | "about" | "qrconnect">("send");
   const [devices, setDevices] = useState<Device[]>([]);
   const [localIp, setLocalIp] = useState("Đang tải...");
   
@@ -170,6 +170,14 @@ function App() {
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
   const [releaseUrl, setReleaseUrl] = useState('');
+
+  // QR Connect State
+  const [qrcActive, setQrcActive] = useState(false);
+  const [qrcUrl, setQrcUrl] = useState('');
+  const [qrcConnectedDevice, setQrcConnectedDevice] = useState<string | null>(null);
+  const [qrcSharedFiles, setQrcSharedFiles] = useState<string[]>([]);
+  const [qrcPendingUploads, setQrcPendingUploads] = useState<{id: string, name: string, size: number}[]>([]);
+  const [qrcReceivedFiles, setQrcReceivedFiles] = useState<{name: string, time: string}[]>([]);
 
   const handleCheckUpdate = async () => {
     setUpdateStatus('checking');
@@ -430,6 +438,37 @@ function App() {
       unlistenNavigateTab.then(f => f());
     };
   }, []);
+
+  // QR Connect event listeners
+  useEffect(() => {
+    const unlistenQrcConnected = listen('qrc-device-connected', (event: any) => {
+      setQrcConnectedDevice(event.payload?.device || 'Mobile Browser');
+    });
+    const unlistenQrcDisconnected = listen('qrc-device-disconnected', () => {
+      setQrcConnectedDevice(null);
+    });
+    const unlistenQrcUploadRequest = listen<{id: string, name: string, size: number}>('qrc-upload-request', async (event) => {
+      setQrcPendingUploads(prev => [...prev, event.payload]);
+      setActiveTab('qrconnect');
+      try {
+        const win = getCurrentWindow();
+        await win.unminimize();
+        await win.show();
+        await win.setFocus();
+      } catch (e) { console.error(e); }
+      triggerOSNotification('QR Connect', `Có file gửi từ điện thoại: ${event.payload.name}`);
+    });
+    const unlistenQrcUploadComplete = listen<{id: string, name: string, time: string}>('qrc-upload-complete', (event) => {
+      setQrcPendingUploads(prev => prev.filter(u => u.id !== event.payload.id));
+      setQrcReceivedFiles(prev => [{ name: event.payload.name, time: event.payload.time }, ...prev]);
+    });
+    return () => {
+      unlistenQrcConnected.then(f => f());
+      unlistenQrcDisconnected.then(f => f());
+      unlistenQrcUploadRequest.then(f => f());
+      unlistenQrcUploadComplete.then(f => f());
+    };
+  }, []);
   
   const handleSelectFiles = async () => {
     try {
@@ -600,6 +639,14 @@ function App() {
             {pendingReceives.length > 0 && (
               <span className="bg-red-500 text-[#ffffff] text-xs font-bold px-2 py-0.5 rounded-full">{pendingReceives.length}</span>
             )}
+          </button>
+          <button 
+            onClick={() => setActiveTab("qrconnect")}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'qrconnect' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+          >
+            <Zap className="w-5 h-5" />
+            <span className="font-medium">QR Connect</span>
+            {qrcConnectedDevice && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>}
           </button>
           <button 
             onClick={() => setActiveTab("portal")}
@@ -863,6 +910,189 @@ function App() {
                 </div>
               </motion.div>
             )}
+            {activeTab === "qrconnect" && (
+              <motion.div key="qrconnect" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-6 max-w-4xl mx-auto w-full">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+                    <Zap className="w-8 h-8 text-tichphong-blue" />
+                    QR Connect
+                  </h1>
+                  <p className="text-gray-400">{t("Quét mã QR để kết nối điện thoại — chia sẻ file 2 chiều qua trình duyệt, không cần cài app.", "Scan QR to connect phone — share files bidirectionally via browser, no app needed.")}</p>
+                </div>
+
+                {/* Start/Stop + QR Code */}
+                <div className="glass-card rounded-2xl p-6 border border-white/5">
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    {/* QR Code Area */}
+                    <div className="flex flex-col items-center gap-4">
+                      {qrcActive && qrcUrl ? (
+                        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center">
+                          <div className="bg-white p-4 rounded-2xl shadow-2xl">
+                            <QRCode value={qrcUrl} size={180} style={{ height: "auto", maxWidth: "100%", width: "100%" }} />
+                          </div>
+                          <code className="mt-3 text-xs text-gray-500 break-all text-center max-w-[220px]">{qrcUrl}</code>
+                        </motion.div>
+                      ) : (
+                        <div className="w-[212px] h-[212px] bg-white/5 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center">
+                          <QrCode className="w-12 h-12 text-gray-600 mb-2" />
+                          <p className="text-xs text-gray-500 text-center px-4">{t("Bấm Bắt đầu để sinh mã QR", "Press Start to generate QR code")}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status + Controls */}
+                    <div className="flex-1 flex flex-col gap-4 w-full">
+                      <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                        <div className={`w-3 h-3 rounded-full ${qrcConnectedDevice ? 'bg-green-400 animate-pulse' : qrcActive ? 'bg-yellow-400 animate-pulse' : 'bg-gray-600'}`}></div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {qrcConnectedDevice ? `📱 ${t("Đã kết nối:", "Connected:")} ${qrcConnectedDevice}` : qrcActive ? t("Đang chờ kết nối...", "Waiting for connection...") : t("Chưa hoạt động", "Inactive")}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {qrcActive ? t("Điện thoại quét mã QR để kết nối", "Phone scans QR code to connect") : t("Bấm Bắt đầu để tạo phiên mới", "Press Start to create a new session")}
+                          </p>
+                        </div>
+                      </div>
+
+                      {!qrcActive ? (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const url = await invoke<string>("start_qr_connect");
+                              setQrcUrl(url);
+                              setQrcActive(true);
+                              setQrcSharedFiles([]);
+                              setQrcConnectedDevice(null);
+                              setQrcPendingUploads([]);
+                              setQrcReceivedFiles([]);
+                            } catch (e) { console.error(e); }
+                          }}
+                          className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-3 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Zap className="w-5 h-5" /> {t("Bắt đầu", "Start")}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await invoke("stop_qr_connect");
+                              setQrcActive(false);
+                              setQrcUrl('');
+                              setQrcConnectedDevice(null);
+                              setQrcSharedFiles([]);
+                            } catch (e) { console.error(e); }
+                          }}
+                          className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-6 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <XCircle className="w-5 h-5" /> {t("Dừng phiên", "Stop Session")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Share files from PC to Phone */}
+                {qrcActive && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl border border-white/5 overflow-hidden">
+                    <div className="p-4 border-b border-white/5 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-tichphong-blue/20 text-tichphong-blue flex items-center justify-center"><Send className="w-4 h-4" /></div>
+                      <h2 className="font-semibold">{t("Chia sẻ file cho Điện thoại", "Share Files to Phone")}</h2>
+                      {qrcSharedFiles.length > 0 && <span className="ml-auto bg-tichphong-blue text-[#ffffff] text-xs font-bold px-2 py-0.5 rounded-full">{qrcSharedFiles.length}</span>}
+                    </div>
+                    <div className="p-4">
+                      <div
+                        onClick={async () => {
+                          try {
+                            const { open } = await import('@tauri-apps/plugin-dialog');
+                            const files = await open({ multiple: true, title: 'Chọn file chia sẻ qua QR Connect' });
+                            if (files) {
+                              const newFiles = Array.isArray(files) ? files as string[] : [files as string];
+                              const allFiles = [...new Set([...qrcSharedFiles, ...newFiles])];
+                              setQrcSharedFiles(allFiles);
+                              await invoke("qrc_share_files", { filePaths: allFiles });
+                            }
+                          } catch (e) { console.error(e); }
+                        }}
+                        className="w-full h-24 border-2 border-dashed border-tichphong-blue/30 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-tichphong-blue/5 hover:border-tichphong-blue transition-all"
+                      >
+                        <Send className="w-6 h-6 text-gray-500 mb-1" />
+                        <p className="text-sm font-medium text-gray-400">{t("Nhấn để chọn file gửi cho điện thoại", "Click to select files to share")}</p>
+                      </div>
+
+                      {qrcSharedFiles.length > 0 && (
+                        <div className="mt-3 flex flex-col gap-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+                          {qrcSharedFiles.map((file, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                              <FileIcon className="w-4 h-4 text-tichphong-blue shrink-0" />
+                              <span className="text-sm truncate flex-1">{file.split(/(\\|\/)/g).pop()}</span>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const updated = qrcSharedFiles.filter((_, i) => i !== idx);
+                                  setQrcSharedFiles(updated);
+                                  await invoke("qrc_share_files", { filePaths: updated });
+                                }}
+                                className="p-1 hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded-md transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Pending uploads from Phone */}
+                {qrcPendingUploads.length > 0 && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl border border-yellow-500/30 overflow-hidden bg-yellow-500/5">
+                    <div className="p-4 border-b border-yellow-500/20 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-400 flex items-center justify-center"><Download className="w-4 h-4" /></div>
+                      <h2 className="font-semibold text-yellow-400">{t("File chờ duyệt từ Điện thoại", "Pending Files from Phone")}</h2>
+                    </div>
+                    <div className="p-4 flex flex-col gap-3">
+                      {qrcPendingUploads.map(upload => (
+                        <div key={upload.id} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
+                          <FileIcon className="w-5 h-5 text-yellow-400 shrink-0" />
+                          <div className="flex-1 overflow-hidden">
+                            <p className="font-medium text-sm truncate">{upload.name}</p>
+                            <p className="text-xs text-gray-500">{formatSize(upload.size)}</p>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <button onClick={() => invoke("qrc_reject_upload", { uploadId: upload.id }).then(() => setQrcPendingUploads(prev => prev.filter(u => u.id !== upload.id)))} className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 cursor-pointer">
+                              <XCircle className="w-3.5 h-3.5" /> {t("Từ chối", "Decline")}
+                            </button>
+                            <button onClick={() => invoke("qrc_accept_upload", { uploadId: upload.id })} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 cursor-pointer shadow-lg shadow-tichphong-blue/20">
+                              <CheckCircle className="w-3.5 h-3.5" /> {t("Chấp nhận", "Accept")}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Received file history */}
+                {qrcReceivedFiles.length > 0 && (
+                  <div className="border-t border-white/10 pt-4">
+                    <h2 className="text-lg font-semibold mb-3 text-gray-300">{t("File đã nhận qua QR Connect", "Received via QR Connect")}</h2>
+                    <div className="flex flex-col gap-2">
+                      {qrcReceivedFiles.map((item, idx) => (
+                        <div key={idx} className="bg-white/5 border border-white/5 rounded-lg p-3 flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                          <div className="flex-1 overflow-hidden">
+                            <p className="truncate font-medium text-sm">{item.name}</p>
+                          </div>
+                          <span className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded-md">{item.time}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {activeTab === "portal" && (
               <motion.div key="portal" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-8 max-w-4xl mx-auto w-full">
                 <div>

@@ -22,7 +22,7 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-axum = { version = "0.8.9", features = ["multipart"] }
+axum = { version = "0.8.9", features = ["multipart", "ws"] }
 tokio = { version = "1.52.3", features = ["full"] }
 mdns-sd = "0.20.0"
 local-ip-address = "0.6.13"
@@ -39,6 +39,7 @@ tauri-plugin-notification = "2.3.3"
 warp = { version = "0.3", features = ["default"] }
 dav-server = { version = "0.11.0", features = ["warp-compat"] }
 env_logger = "0.11"
+tokio-util = { version = "0.7", features = ["io"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"
