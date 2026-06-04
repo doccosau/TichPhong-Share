@@ -68,8 +68,8 @@ export default function App() {
             className="text-center max-w-5xl mx-auto flex flex-col items-center"
           >
             <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass-card text-tp-primary font-bold text-sm mb-10 border-tp-primary/20 hover:border-tp-primary/40 transition-colors shadow-sm">
-              <Zap size={18} className="animate-pulse" />
-              <span className="uppercase tracking-wider text-xs">V2.0.0 Coming Soon - Đột phá mới</span>
+              <Rocket size={16} />
+              <span className="uppercase tracking-wider text-xs">V2.0.0 Coming Soon - <span className="font-charm text-base lowercase tracking-normal">Đột phá mới</span></span>
             </motion.div>
             
             <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-black tracking-tighter text-tp-text mb-8 leading-[1.05] font-serif">
@@ -175,7 +175,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16 relative z-10">
             <div className="text-tp-primary font-bold uppercase tracking-widest text-sm mb-3">Tính năng toàn diện</div>
-            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 tracking-tight font-serif">Giải pháp <span className="text-gradient">hoàn hảo</span> cho bạn</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 tracking-tight font-serif">Giải pháp <span className="text-gradient font-charm font-bold">hoàn hảo</span> cho bạn</h2>
             <p className="text-xl text-tp-subtext max-w-2xl mx-auto font-medium">Được phát triển với mục tiêu thay thế hoàn toàn cáp truyền dữ liệu truyền thống.</p>
           </div>
 
@@ -212,7 +212,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <div className="text-tp-primary font-bold uppercase tracking-widest text-sm mb-3">Dễ sử dụng</div>
-            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 font-serif">Chỉ với 3 bước đơn giản</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 font-serif">Chỉ với 3 bước <span className="font-charm text-tp-primary">đơn giản</span></h2>
             <p className="text-lg text-tp-subtext max-w-2xl mx-auto font-medium">Bạn không cần phải thiết lập phức tạp, ứng dụng tự động dò tìm thiết bị xung quanh.</p>
           </div>
           
@@ -295,7 +295,7 @@ export default function App() {
             <div className="absolute -top-40 -right-40 w-96 h-96 bg-tp-primary/10 rounded-full blur-3xl"></div>
             <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-tp-accent/10 rounded-full blur-3xl"></div>
             
-            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 font-serif">Sẵn sàng trải nghiệm?</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 font-serif">Sẵn sàng <span className="font-charm text-tp-primary">trải nghiệm?</span></h2>
             <p className="text-xl text-tp-subtext mb-12 max-w-2xl mx-auto font-medium">
               Tải xuống bản ổn định ngay hôm nay, hoặc đón chờ phiên bản 2.0.0 cực khủng với tính năng QR Connect.
             </p>
