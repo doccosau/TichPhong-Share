@@ -1679,7 +1679,7 @@ function App() {
                     <h2 className="text-3xl font-bold mb-2">TichPhong Share</h2>
                     <p className="text-tichphong-blue font-medium mb-6">Version 2.0.0 (Standalone)</p>
                     <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-2xl mx-auto">
-                      {t("Ứng dụng chia sẻ file siêu tốc, hỗ trợ đa nền tảng và tích hợp sâu với hệ sinh thái TichPhong OS. Chia sẻ qua LocalSend, Quick Share và WebDAV.", "High-speed file sharing app, cross-platform support and deeply integrated with TichPhong OS ecosystem. Share via LocalSend, Quick Share and WebDAV.")}
+                      {t("Ứng dụng chia sẻ file siêu tốc, hỗ trợ đa nền tảng và tích hợp sâu với hệ sinh thái TichPhong OS. Chia sẻ qua LocalSend, Quick Share, WebDAV và QR Connect (TichPhong Direct).", "High-speed file sharing app, cross-platform support and deeply integrated with TichPhong OS ecosystem. Share via LocalSend, Quick Share, WebDAV and QR Connect (TichPhong Direct).")}
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-4">
                       <button onClick={() => window.open('https://github.com/doccosau/TichPhong-Share', '_blank')} className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer">
