@@ -20,9 +20,6 @@
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
-  h1, h2, h3, .font-serif {
-    font-family: 'Playfair Display', 'EB Garamond', serif;
-  }
   .font-charm {
     font-family: 'Charm', cursive;
   }
