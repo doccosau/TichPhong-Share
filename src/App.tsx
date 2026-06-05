@@ -1913,10 +1913,12 @@ function App() {
                     
                     <div className="bg-white/5 p-5 rounded-xl border border-white/5">
                       <h3 className="text-orange-400 font-bold text-lg mb-2 flex items-center gap-2"><Info className="w-4 h-4" /> {t("Thông tin Giấy phép", "License Information")}</h3>
-                      <p className="text-gray-400">
-                        {t("TichPhong Share được phân phối dưới giấy phép GNU GPL v3.", "TichPhong Share is distributed under the GNU GPL v3 License.")}<br/>
-                        <span className="text-emerald-400">{t("Mã nguồn mở và hoàn toàn miễn phí.", "Open-source and completely free.")}</span><br/>
-                        {t("Sử dụng mã nguồn mở LocalSend/rqs (MIT License) kết hợp giao thức độc quyền TichPhong Direct.", "Uses open-source LocalSend/rqs (MIT License) combined with the exclusive TichPhong Direct protocol.")}
+                      <p className="text-gray-400 leading-relaxed">
+                        {t("TichPhong Share được phát triển độc quyền cho Hệ điều hành TichPhong OS.", "TichPhong Share is exclusively developed for TichPhong OS.")}<br/>
+                        <span className="text-emerald-400 font-medium mt-2 block">❖ TichPhong Direct (QR Connect)</span>
+                        {t("Bảo vệ dưới giấy phép nguồn mở GNU GPL v3.", "Protected under GNU GPL v3 open-source license.")}<br/>
+                        <span className="text-blue-400 font-medium mt-1 block">❖ LocalSend/rqs</span>
+                        {t("Kế thừa giao thức bảo mật theo giấy phép MIT License.", "Inherits security protocols under MIT License.")}
                       </p>
                     </div>
                   </div>
