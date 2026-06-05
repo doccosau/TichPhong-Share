@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy / Chính Sách Bảo Mật - TichPhong Share</title>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #062a1c; background-color: #f4fbf7; max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+        h1, h2, h3 { font-family: 'Be Vietnam Pro', sans-serif; color: #059669; }
+        h1 { font-size: 2.2rem; margin-bottom: 0.5rem; }
+        .last-updated { color: #446857; font-size: 0.9rem; margin-bottom: 2rem; }
+        p { margin-bottom: 1rem; color: #446857; }
+        ul { margin-bottom: 1rem; color: #446857; }
+        a { color: #0ea5e9; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back-link { display: inline-block; margin-bottom: 2rem; font-weight: 600; color: #059669; }
+        .lang-switch { margin-bottom: 2rem; }
+        .lang-btn { background: none; border: 1px solid #059669; color: #059669; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-family: inherit; font-weight: 600; }
+        .lang-btn.active { background: #059669; color: white; }
+        .en-content { display: none; }
+    </style>
+    <script>
+        function setLang(lang) {
+            document.querySelectorAll('.vi-content').forEach(el => el.style.display = lang === 'vi' ? 'block' : 'none');
+            document.querySelectorAll('.en-content').forEach(el => el.style.display = lang === 'en' ? 'block' : 'none');
+            document.getElementById('btn-vi').classList.toggle('active', lang === 'vi');
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+        }
+    </script>
+</head>
+<body>
+    <a href="/" class="back-link">← Home / Trang chủ</a>
+    
+    <div class="lang-switch">
+        <button id="btn-vi" class="lang-btn active" onclick="setLang('vi')">Tiếng Việt</button>
+        <button id="btn-en" class="lang-btn" onclick="setLang('en')">English</button>
+    </div>
+
+    <!-- Vietnamese Content -->
+    <div class="vi-content">
+        <h1>Chính Sách Bảo Mật</h1>
+        <div class="last-updated">Cập nhật lần cuối: Tháng 6, 2026</div>
+
+        <h2>1. Cam kết về quyền riêng tư</h2>
+        <p>TichPhong OS Team ("chúng tôi") tôn trọng và bảo vệ tuyệt đối quyền riêng tư của bạn. TichPhong Share được thiết kế với tư duy Privacy-First (Bảo mật là trên hết). Cốt lõi của phần mềm là giao tiếp ngang hàng (Peer-to-Peer).</p>
+
+        <h2>2. Thu thập dữ liệu</h2>
+        <p><strong>Chúng tôi KHÔNG thu thập, KHÔNG lưu trữ và KHÔNG theo dõi</strong> bất kỳ tệp tin, hình ảnh, video, dữ liệu cá nhân hay lịch sử truyền tải nào của bạn. TichPhong Share hoạt động hoàn toàn ngoại tuyến trên mạng nội bộ (LAN) của bạn.</p>
+        <p>Trang web Landing Page có thể thu thập các số liệu thống kê truy cập web cơ bản và ẩn danh hoàn toàn (thông qua dịch vụ lưu trữ tĩnh) để đếm số lượt xem, nhưng không có thông tin định danh cá nhân nào được thu thập.</p>
+
+        <h2>3. Lưu trữ và Mã hóa</h2>
+        <ul>
+            <li>Dữ liệu truyền qua mạng nội bộ được mã hóa chuẩn TLS, đảm bảo không một ai trên cùng mạng Wi-Fi có thể "đọc trộm" được file bạn đang gửi.</li>
+            <li>Tất cả cấu hình ứng dụng được lưu cục bộ trên ổ cứng máy tính hoặc điện thoại của bạn.</li>
+        </ul>
+
+        <h2>4. Chia sẻ với bên thứ ba</h2>
+        <p>Vì chúng tôi không sở hữu hay thu thập bất kỳ dữ liệu nào của bạn, chúng tôi không có dữ liệu để chia sẻ, bán, hoặc cung cấp cho bất kỳ tổ chức hay bên thứ ba nào.</p>
+
+        <h2>5. Liên hệ</h2>
+        <p>Nếu có bất kỳ câu hỏi nào về vấn đề bảo mật hay mã nguồn mở, bạn có thể xem trực tiếp mã nguồn trên <a href="https://github.com/doccosau/TichPhong-Share">GitHub</a> hoặc liên hệ qua trang chủ TichPhong OS.</p>
+    </div>
+
+    <!-- English Content -->
+    <div class="en-content">
+        <h1>Privacy Policy</h1>
+        <div class="last-updated">Last Updated: June, 2026</div>
+
+        <h2>1. Privacy Commitment</h2>
+        <p>The TichPhong OS Team ("we") respects and completely protects your privacy. TichPhong Share is designed with a Privacy-First mindset. The core of the software is Peer-to-Peer (P2P) communication.</p>
+
+        <h2>2. Data Collection</h2>
+        <p><strong>We DO NOT collect, DO NOT store, and DO NOT track</strong> any of your files, images, videos, personal data, or transfer history. TichPhong Share operates entirely offline on your local network (LAN).</p>
+        <p>The Landing Page website may collect basic and fully anonymous web traffic statistics (via static hosting services) to count page views, but no personally identifiable information is collected.</p>
+
+        <h2>3. Storage and Encryption</h2>
+        <ul>
+            <li>Data transmitted over the local network is encrypted using TLS, ensuring no one on the same Wi-Fi network can "snoop" on the files you are sending.</li>
+            <li>All application configurations are stored locally on your computer's or phone's hard drive.</li>
+        </ul>
+
+        <h2>4. Third-Party Sharing</h2>
+        <p>Because we do not own or collect any of your data, we have no data to share, sell, or provide to any organization or third party.</p>
+
+        <h2>5. Contact</h2>
+        <p>If you have any questions regarding security or open-source issues, you can review the source code directly on <a href="https://github.com/doccosau/TichPhong-Share">GitHub</a> or contact us via the TichPhong OS homepage.</p>
+    </div>
+</body>
+</html>

@@ -362,10 +362,10 @@ export default function App() {
             </div>
             
             <div>
-              <h4 className="font-bold text-tp-text mb-6 uppercase tracking-wider text-sm">Cộng đồng</h4>
+              <h4 className="font-bold text-tp-text mb-6 uppercase tracking-wider text-sm">Pháp lý & Chính sách</h4>
               <ul className="space-y-4 text-tp-subtext font-medium">
-                <li><a href="https://tichphongthienson.info.vn" className="hover:text-tp-primary transition-colors flex items-center gap-2"><ArrowRight size={14}/> TichPhong Blog</a></li>
-                <li><a href="#" className="hover:text-tp-primary transition-colors flex items-center gap-2"><ArrowRight size={14}/> Về TichPhong OS</a></li>
+                <li><a href="/terms.html" className="hover:text-tp-primary transition-colors flex items-center gap-2"><ArrowRight size={14}/> Điều khoản Dịch vụ</a></li>
+                <li><a href="/privacy.html" className="hover:text-tp-primary transition-colors flex items-center gap-2"><ArrowRight size={14}/> Chính sách Bảo mật</a></li>
                 <li><a href="https://github.com/doccosau/TichPhong-Share/pulls" className="hover:text-tp-primary transition-colors flex items-center gap-2"><ArrowRight size={14}/> Hỗ trợ đóng góp</a></li>
               </ul>
             </div>

@@ -1913,13 +1913,22 @@ function App() {
                     
                     <div className="bg-white/5 p-5 rounded-xl border border-white/5">
                       <h3 className="text-orange-400 font-bold text-lg mb-2 flex items-center gap-2"><Info className="w-4 h-4" /> {t("Thông tin Giấy phép", "License Information")}</h3>
-                      <p className="text-gray-400 leading-relaxed">
+                      <p className="text-gray-400 leading-relaxed mb-4">
                         {t("TichPhong Share được phát triển độc quyền cho Hệ điều hành TichPhong OS.", "TichPhong Share is exclusively developed for TichPhong OS.")}<br/>
                         <span className="text-emerald-400 font-medium mt-2 block">❖ TichPhong Direct & Quick Share (rqs)</span>
                         {t("Bảo vệ dưới giấy phép nguồn mở GNU GPL v3.", "Protected under GNU GPL v3 open-source license.")}<br/>
                         <span className="text-blue-400 font-medium mt-1 block">❖ LocalSend Protocol</span>
                         {t("Kế thừa giao thức bảo mật theo giấy phép Apache 2.0 License.", "Inherits security protocols under Apache 2.0 License.")}
                       </p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-white/10">
+                        <button onClick={() => openUrl('https://tpshare.tichphongthienson.info.vn/terms.html')} className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 py-2 rounded-lg text-sm text-gray-300 hover:text-white transition-colors">
+                          {t("Điều khoản Dịch vụ", "Terms of Service")}
+                        </button>
+                        <button onClick={() => openUrl('https://tpshare.tichphongthienson.info.vn/privacy.html')} className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 py-2 rounded-lg text-sm text-gray-300 hover:text-white transition-colors">
+                          {t("Chính sách Bảo mật", "Privacy Policy")}
+                        </button>
+                      </div>
                     </div>
                   </div>
                   
