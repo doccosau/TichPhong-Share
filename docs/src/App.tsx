@@ -75,7 +75,7 @@ export default function App() {
             
             <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-black tracking-tighter text-tp-text mb-8 leading-[1.05] ">
               Vượt qua mọi <br className="hidden md:block"/>
-              <span className="text-gradient drop-shadow-sm font-charm italic font-bold tracking-tight">
+              <span className="text-gradient drop-shadow-sm font-serif italic font-bold tracking-tight">
                 giới hạn truyền tải
               </span>
             </motion.h1>
