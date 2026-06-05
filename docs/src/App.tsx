@@ -81,7 +81,7 @@ export default function App() {
             </motion.h1>
             
             <motion.p variants={itemVariants} className="text-xl md:text-2xl text-tp-subtext mb-12 max-w-3xl mx-auto leading-relaxed font-medium opacity-90">
-              Chia sẻ tệp tin siêu tốc giữa mọi thiết bị qua <span className="text-tp-primary font-bold">QR Connect</span> & <span className="text-tp-primary font-bold">Quick Share</span>. <br className="hidden md:block"/> 
+              Chia sẻ tệp tin siêu tốc giữa mọi thiết bị qua <span className="text-tp-primary font-bold">QR Connect</span>, <span className="text-tp-primary font-bold">Quick Share</span> & <span className="text-tp-primary font-bold">LocalSend</span>. <br className="hidden md:block"/> 
               <span className="text-tp-text font-semibold">Bảo mật tuyệt đối. Không giới hạn dung lượng.</span>
             </motion.p>
             
