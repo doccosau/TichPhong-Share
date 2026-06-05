@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecting...</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #0d1117;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, sans-serif;
+            text-align: center;
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #00f0ff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .text {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        .subtext {
+            color: #8b949e;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="loader"></div>
+        <div class="text">Đang kết nối vào mạng nội bộ...</div>
+        <div class="subtext">Connecting to local network...</div>
+    </div>
+    <script>
+        // Redirect to the local IP passed in the URL parameter
+        const params = new URLSearchParams(window.location.search);
+        const targetUrl = params.get('url');
+        if (targetUrl && targetUrl.startsWith('http')) {
+            window.location.replace(targetUrl);
+        } else {
+            document.querySelector('.text').innerText = 'Lỗi mã QR không hợp lệ!';
+            document.querySelector('.subtext').innerText = 'Invalid QR code!';
+            document.querySelector('.loader').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
