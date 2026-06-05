@@ -20,8 +20,8 @@
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
-  h1, h2, h3, .font-serif {
-    font-family: 'Lora', serif;
+  h1, h2, h3, .font-heading {
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
   .font-charm {
     font-family: 'Charm', cursive;
