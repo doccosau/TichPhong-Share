@@ -73,9 +73,9 @@ export default function App() {
               <span className="uppercase tracking-wider text-xs">V2.0.0 Coming Soon - <span className="font-charm text-base lowercase tracking-normal">Đột phá mới</span></span>
             </motion.div>
             
-            <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-black tracking-tighter text-tp-text mb-8 leading-[1.05] ">
+            <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-charm font-bold tracking-tight text-tp-text mb-8 leading-[1.05] ">
               Vượt qua mọi <br className="hidden md:block"/>
-              <span className="text-gradient drop-shadow-sm font-serif italic font-bold tracking-tight">
+              <span className="text-gradient drop-shadow-sm">
                 giới hạn truyền tải
               </span>
             </motion.h1>
