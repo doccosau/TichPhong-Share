@@ -24,9 +24,10 @@ export default function App() {
   };
 
   const faqs = [
-    { q: "TichPhong Share có miễn phí không?", a: "Hoàn toàn miễn phí. Phần mềm được phát triển dưới dạng mã nguồn mở bởi cộng đồng TichPhong OS và sẽ luôn miễn phí, không có quảng cáo." },
+    { q: "TichPhong Share có miễn phí không?", a: "Hoàn toàn miễn phí. Phần mềm được phát triển dưới dạng mã nguồn mở và sẽ luôn miễn phí, không có quảng cáo." },
     { q: "Tôi có cần kết nối Internet để gửi file?", a: "Không cần. TichPhong Share truyền dữ liệu qua mạng cục bộ (LAN hoặc Wi-Fi). Thậm chí bạn có thể phát Wi-Fi Hotspot từ điện thoại để kết nối trực tiếp với máy tính ở nơi không có mạng." },
     { q: "Tốc độ truyền tải tối đa là bao nhiêu?", a: "Tốc độ phụ thuộc vào router Wi-Fi hoặc cáp mạng LAN của bạn. Với Wi-Fi 5/6, tốc độ có thể đạt từ 30MB/s đến hơn 100MB/s, nhanh hơn rất nhiều so với Bluetooth." },
+    { q: "TichPhong Share sử dụng công nghệ gì?", a: "Chúng tôi phát triển giao thức TichPhong Direct (được bảo vệ bởi GPLv3) tối ưu cho TichPhong OS. Đồng thời, ứng dụng kế thừa và tương thích ngược với mạng lưới của Quick Share (rqs - GPLv3) và LocalSend (Apache 2.0) giúp kết nối chéo với mọi thiết bị Android/iOS dễ dàng." },
     { q: "Phiên bản 2.0 khi nào ra mắt?", a: "Phiên bản 2.0 (với tính năng QR Connect và TichPhong Direct) đang trong giai đoạn hoàn thiện cuối cùng và sẽ sớm được phát hành trên GitHub (Coming Soon)." }
   ];
 
@@ -371,8 +372,12 @@ export default function App() {
           </div>
           
           <div className="pt-8 border-t border-tp-primary/10 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm font-semibold text-tp-subtext/80">
-              © {new Date().getFullYear()} TichPhong OS Team. Mọi quyền được bảo lưu.
+            <div className="text-sm font-semibold text-tp-subtext/80 text-center md:text-left">
+              © {new Date().getFullYear()} TichPhong OS Team. Mọi quyền được bảo lưu.<br/>
+              <span className="font-normal mt-1 block">
+                TichPhong Direct & Quick Share (rqs) được cấp phép <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer" className="hover:text-tp-primary transition-colors underline">GNU GPLv3</a>. 
+                Tương thích nền tảng <a href="https://github.com/localsend/localsend" target="_blank" rel="noopener noreferrer" className="hover:text-tp-primary transition-colors underline">LocalSend</a> (Apache 2.0).
+              </span>
             </div>
             <div className="text-sm font-semibold text-tp-subtext/80 flex items-center gap-1">
               Phát triển với <Heart size={14} className="text-red-500 mx-1 inline animate-pulse" /> bởi cộng đồng mã nguồn mở.
