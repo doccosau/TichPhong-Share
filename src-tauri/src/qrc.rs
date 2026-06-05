@@ -16,7 +16,6 @@
  */
 
 use axum::{
-    body::Body,
     extract::{
         ws::{Message, WebSocket},
         Path, Query, State as AxumState, WebSocketUpgrade,

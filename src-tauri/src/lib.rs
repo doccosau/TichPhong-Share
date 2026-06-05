@@ -1,16 +1,3 @@
-mod qrc;
-
-use axum::{
-    body::Body,
-    extract::{Query, State as AxumState},
-    http::StatusCode,
-    response::Json,
-    routing::{get, post},
-    Router,
-};
-use directories::UserDirs;
-use futures_util::StreamExt;
-use local_ip_address::local_ip;
 /*
  * Copyright (c) 2024 TichPhong OS / doccosau
  *
@@ -28,7 +15,19 @@ use local_ip_address::local_ip;
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use base64::{engine::general_purpose, Engine as _};
+mod qrc;
+
+use axum::{
+    body::Body,
+    extract::{Query, State as AxumState},
+    http::StatusCode,
+    response::Json,
+    routing::{get, post},
+    Router,
+};
+use directories::UserDirs;
+use futures_util::StreamExt;
+use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File};
