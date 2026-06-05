@@ -1918,7 +1918,7 @@ function App() {
                         <span className="text-emerald-400 font-medium mt-2 block">❖ TichPhong Direct (QR Connect)</span>
                         {t("Bảo vệ dưới giấy phép nguồn mở GNU GPL v3.", "Protected under GNU GPL v3 open-source license.")}<br/>
                         <span className="text-blue-400 font-medium mt-1 block">❖ LocalSend/rqs</span>
-                        {t("Kế thừa giao thức bảo mật theo giấy phép MIT License.", "Inherits security protocols under MIT License.")}
+                        {t("Kế thừa giao thức bảo mật theo giấy phép Apache 2.0 License.", "Inherits security protocols under Apache 2.0 License.")}
                       </p>
                     </div>
                   </div>
