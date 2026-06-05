@@ -1915,9 +1915,9 @@ function App() {
                       <h3 className="text-orange-400 font-bold text-lg mb-2 flex items-center gap-2"><Info className="w-4 h-4" /> {t("Thông tin Giấy phép", "License Information")}</h3>
                       <p className="text-gray-400 leading-relaxed">
                         {t("TichPhong Share được phát triển độc quyền cho Hệ điều hành TichPhong OS.", "TichPhong Share is exclusively developed for TichPhong OS.")}<br/>
-                        <span className="text-emerald-400 font-medium mt-2 block">❖ TichPhong Direct (QR Connect)</span>
+                        <span className="text-emerald-400 font-medium mt-2 block">❖ TichPhong Direct & Quick Share (rqs)</span>
                         {t("Bảo vệ dưới giấy phép nguồn mở GNU GPL v3.", "Protected under GNU GPL v3 open-source license.")}<br/>
-                        <span className="text-blue-400 font-medium mt-1 block">❖ LocalSend/rqs</span>
+                        <span className="text-blue-400 font-medium mt-1 block">❖ LocalSend Protocol</span>
                         {t("Kế thừa giao thức bảo mật theo giấy phép Apache 2.0 License.", "Inherits security protocols under Apache 2.0 License.")}
                       </p>
                     </div>
