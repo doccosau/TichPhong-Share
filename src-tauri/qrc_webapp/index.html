@@ -104,6 +104,12 @@
   .preview-item img { width: 100%; height: 100%; object-fit: cover; }
   .preview-item .icon-fallback { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--tp-text-muted); font-size: 11px; padding: 4px; text-align: center; }
   .preview-remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 4px; }
+
+  /* Drag & drop highlight */
+  .drop-active { border-color: var(--tp-accent) !important; background: var(--tp-accent-light) !important; }
+
+  /* Thumbnail in file list */
+  .file-thumb { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
   
   /* Upload Progress */
   .progress-item { padding: 14px; background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 16px; margin-bottom: 12px; }
@@ -207,10 +213,10 @@
   <!-- Tab: Gửi File -->
   <div id="tab-send" class="tab-content">
     <input type="file" id="file-input" multiple style="display: none;">
-    <button class="btn btn-outline" style="width: 100%; border-style: dashed; padding: 24px;" onclick="document.getElementById('file-input').click()">
+    <div id="drop-zone" class="btn btn-outline" style="width: 100%; border-style: dashed; padding: 24px; cursor: pointer;" onclick="document.getElementById('file-input').click()">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       <span data-i18n="select_file">Chọn File hoặc Ảnh</span>
-    </button>
+    </div>
     
     <div id="preview-section" style="display:none;">
       <h3 style="font-size: 14px; color: var(--tp-text-muted); margin-top: 8px;" id="preview-count" data-i18n="selected_count">Đã chọn 0 file</h3>
@@ -463,14 +469,26 @@ function showToast(msg, isSuccess = true) {
 
 function getFileIcon(filename) {
   const ext = filename.split('.').pop().toLowerCase();
-  const imgs = ['jpg','jpeg','png','gif','webp','svg'];
-  const vids = ['mp4','mov','mkv','avi'];
-  const zips = ['zip','rar','7z','tar','gz'];
+  const imgs = ['jpg','jpeg','png','gif','webp','svg','bmp','ico','heic'];
+  const vids = ['mp4','mov','mkv','avi','webm','flv','wmv'];
+  const zips = ['zip','rar','7z','tar','gz','xz','bz2'];
+  const audio = ['mp3','wav','flac','aac','ogg','m4a','wma'];
+  const docs = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','rtf'];
+  const code = ['js','ts','py','rs','java','c','cpp','html','css','json','xml'];
   
   if (imgs.includes(ext)) return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
   if (vids.includes(ext)) return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`;
+  if (audio.includes(ext)) return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+  if (ext === 'pdf') return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+  if (docs.includes(ext)) return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`;
+  if (code.includes(ext)) return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
   if (zips.includes(ext)) return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 4v4"/><path d="M14 4v4"/><path d="M10 12v4"/><path d="M14 12v4"/></svg>`;
   return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+}
+
+function isImageFile(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  return ['jpg','jpeg','png','gif','webp','svg','bmp','ico'].includes(ext);
 }
 
 // --- WAKE LOCK ---
@@ -585,13 +603,25 @@ function connectWebSocket() {
           xhr.open('POST', `${API_BASE}/qrc/upload?token=${TOKEN}&id=${event.id}`, true);
           xhr.setRequestHeader('X-File-Size', file.size.toString());
           
+          let lastLoaded = 0;
+          let lastTime = Date.now();
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
+              const now = Date.now();
               const percent = Math.round((e.loaded / e.total) * 100);
               const fillEl = document.getElementById(`fill-${event.id}`);
               const metaEl = document.getElementById(`meta-${event.id}`);
+              // Calculate speed (bytes/sec)
+              const elapsed = (now - lastTime) / 1000;
+              let speedText = '';
+              if (elapsed > 0.3) {
+                const speed = (e.loaded - lastLoaded) / elapsed;
+                speedText = ` · ${formatSize(Math.round(speed))}/s`;
+                lastLoaded = e.loaded;
+                lastTime = now;
+              }
               if (fillEl) fillEl.style.width = `${percent}%`;
-              if (metaEl) metaEl.textContent = `${percent}% (${formatSize(e.loaded)} / ${formatSize(e.total)})`;
+              if (metaEl) metaEl.textContent = `${percent}% (${formatSize(e.loaded)} / ${formatSize(e.total)})${speedText}`;
             }
           };
           
@@ -721,9 +751,13 @@ function renderFiles(files) {
 
   btnAll.style.display = files.length > 1 ? 'flex' : 'none';
 
-  container.innerHTML = files.map(f => `
+  container.innerHTML = files.map(f => {
+    const thumb = isImageFile(f.name)
+      ? `<img class="file-thumb" src="${API_BASE}/qrc/download/${f.id}?token=${TOKEN}" alt="" loading="lazy" onerror="this.outerHTML='<div class=file-icon>${getFileIcon(f.name)}</div>'">`
+      : `<div class="file-icon">${getFileIcon(f.name)}</div>`;
+    return `
     <div class="file-item" onclick="downloadFile('${f.id}','${escapeHtml(f.name)}')">
-      <div class="file-icon">${getFileIcon(f.name)}</div>
+      ${thumb}
       <div class="file-info">
         <div class="file-name">${escapeHtml(f.name)}</div>
         <div class="file-meta">${formatSize(f.size) === '0 B' ? 'Thư mục / ZIP động' : formatSize(f.size)}</div>
@@ -732,7 +766,8 @@ function renderFiles(files) {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function downloadFile(id, name) {
@@ -846,6 +881,25 @@ async function startUploads() {
   }
   // Note: releaseWakeLock is NOT called here because uploads happen asynchronously
   // after PC accepts. It will be released when the last XHR completes in upload_accepted handler.
+}
+
+// --- DRAG & DROP ---
+const dropZone = document.getElementById('drop-zone');
+if (dropZone) {
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropZone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drop-active'); });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dropZone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drop-active'); });
+  });
+  dropZone.addEventListener('drop', (e) => {
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      selectedFiles = [...selectedFiles, ...files];
+      renderPreviews();
+      switchTab('send');
+    }
+  });
 }
 
 // --- INITIALIZATION ---
