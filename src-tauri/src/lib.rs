@@ -11,6 +11,24 @@ use axum::{
 use directories::UserDirs;
 use futures_util::StreamExt;
 use local_ip_address::local_ip;
+/*
+ * Copyright (c) 2024 TichPhong OS / doccosau
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -307,7 +325,6 @@ async fn stop_webdav(state: tauri::State<'_, Arc<ShareState>>) -> Result<(), Str
     }
     Ok(())
 }
-
 
 #[tauri::command]
 fn get_settings(state: tauri::State<'_, Arc<ShareState>>) -> ShareSettings {
@@ -786,19 +803,30 @@ async fn start_qr_connect(
         qrc::stop(existing).await;
     }
 
-    let (download_dir, alias, theme, accent) = { 
+    let (download_dir, alias, theme, accent) = {
         let s = state.settings.lock().unwrap();
-        (s.download_dir.clone(), s.alias.clone(), s.theme.clone(), s.accent.clone())
+        (
+            s.download_dir.clone(),
+            s.alias.clone(),
+            s.theme.clone(),
+            s.accent.clone(),
+        )
     };
-    let (url, _token, qrc_state, wifi_qr) = qrc::start(state.app_handle.clone(), download_dir, mode, alias, theme, accent).await?;
+    let (url, _token, qrc_state, wifi_qr) = qrc::start(
+        state.app_handle.clone(),
+        download_dir,
+        mode,
+        alias,
+        theme,
+        accent,
+    )
+    .await?;
     *qrc_guard = Some(qrc_state);
     Ok(QrcStartResponse { url, wifi_qr })
 }
 
 #[tauri::command]
-async fn stop_qr_connect(
-    state: tauri::State<'_, Arc<ShareState>>,
-) -> Result<(), String> {
+async fn stop_qr_connect(state: tauri::State<'_, Arc<ShareState>>) -> Result<(), String> {
     let mut qrc_guard = state.qrc_state.lock().await;
     if let Some(ref existing) = *qrc_guard {
         qrc::stop(existing).await;
@@ -1022,7 +1050,11 @@ pub fn run() {
                             let _ = window.set_focus();
                         }
                     }
-                    id @ "send" | id @ "receive" | id @ "portal" | id @ "settings" | id @ "qrconnect" => {
+                    id @ "send"
+                    | id @ "receive"
+                    | id @ "portal"
+                    | id @ "settings"
+                    | id @ "qrconnect" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();

@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2024 TichPhong OS / doccosau
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 use axum::{
     body::Body,
     extract::{
@@ -55,11 +72,7 @@ pub enum QrcEvent {
     FilesAvailable { files: Vec<QrcFileInfo> },
     /// Phone uploaded a file, pending PC approval (sent to PC)
     #[serde(rename = "upload_request")]
-    UploadRequest {
-        id: String,
-        name: String,
-        size: u64,
-    },
+    UploadRequest { id: String, name: String, size: u64 },
     /// PC accepted upload (sent to phone)
     #[serde(rename = "upload_accepted")]
     UploadAccepted { id: String },
@@ -158,12 +171,8 @@ async fn session_handler(
 
 async fn icon_handler() -> Response {
     let icon_bytes = include_bytes!("../icons/icon.png");
-    (
-        [(header::CONTENT_TYPE, "image/png")],
-        icon_bytes.to_vec(),
-    ).into_response()
+    ([(header::CONTENT_TYPE, "image/png")], icon_bytes.to_vec()).into_response()
 }
-
 
 /// WebSocket endpoint for realtime communication
 async fn websocket_handler(
@@ -231,8 +240,11 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
                 Message::Text(text) => {
                     if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&text) {
                         if parsed["type"] == "device_info" {
-                            let mut device_name = parsed["userAgent"].as_str().unwrap_or("Mobile Browser").to_string();
-                            
+                            let mut device_name = parsed["userAgent"]
+                                .as_str()
+                                .unwrap_or("Mobile Browser")
+                                .to_string();
+
                             // Simple User-Agent parser for nicer display
                             if device_name.contains("iPhone") {
                                 device_name = "Apple iPhone".to_string();
@@ -244,7 +256,10 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
                                     let sub_parts: Vec<&str> = parts[1].split(';').collect();
                                     if sub_parts.len() > 1 {
                                         let model = sub_parts[1].trim();
-                                        device_name = format!("Android ({})", model.split(" Build/").next().unwrap_or(model));
+                                        device_name = format!(
+                                            "Android ({})",
+                                            model.split(" Build/").next().unwrap_or(model)
+                                        );
                                     } else {
                                         device_name = "Android Device".to_string();
                                     }
@@ -252,7 +267,7 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
                                     device_name = "Android Device".to_string();
                                 }
                             }
-                            
+
                             // Update session
                             {
                                 let mut session = state_clone.session.write().await;
@@ -262,9 +277,12 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
                             }
 
                             // Notify PC
-                            let _ = state_clone.app_handle.emit("qrc-device-connected", serde_json::json!({
-                                "device": device_name
-                            }));
+                            let _ = state_clone.app_handle.emit(
+                                "qrc-device-connected",
+                                serde_json::json!({
+                                    "device": device_name
+                                }),
+                            );
                         }
                     }
                 }
@@ -326,11 +344,9 @@ async fn download_handler(
 
     let session = state.session.read().await;
     let file = match &*session {
-        Some(sess) if sess.token == token && !sess.is_expired() => sess
-            .shared_files
-            .iter()
-            .find(|f| f.id == file_id)
-            .cloned(),
+        Some(sess) if sess.token == token && !sess.is_expired() => {
+            sess.shared_files.iter().find(|f| f.id == file_id).cloned()
+        }
         _ => return (StatusCode::FORBIDDEN, "Invalid session").into_response(),
     };
     drop(session);
@@ -346,15 +362,15 @@ async fn download_handler(
                 let (mut tx, rx) = tokio::io::duplex(1024 * 1024 * 4);
                 let stream = tokio_util::io::ReaderStream::new(rx);
                 let body = axum::body::Body::from_stream(stream);
-                
+
                 let path_clone = f.path.clone();
                 tokio::spawn(async move {
                     use tokio_util::compat::FuturesAsyncWriteCompatExt;
                     let mut zip = async_zip::base::write::ZipFileWriter::with_tokio(&mut tx);
-                    
+
                     let mut dirs = vec![std::path::PathBuf::from(&path_clone)];
                     let base_path = std::path::PathBuf::from(&path_clone);
-                    
+
                     while let Some(dir) = dirs.pop() {
                         if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
                             while let Ok(Some(entry)) = entries.next_entry().await {
@@ -366,12 +382,17 @@ async fn download_handler(
                                         let name = rel_path.to_string_lossy().into_owned();
                                         let builder = async_zip::ZipEntryBuilder::new(
                                             async_zip::ZipString::from(name),
-                                            async_zip::Compression::Deflate
+                                            async_zip::Compression::Deflate,
                                         );
                                         if let Ok(mut file) = tokio::fs::File::open(&path).await {
-                                            if let Ok(mut entry_writer) = zip.write_entry_stream(builder).await {
-                                                let mut compat_writer = (&mut entry_writer).compat_write();
-                                                let _ = tokio::io::copy(&mut file, &mut compat_writer).await;
+                                            if let Ok(mut entry_writer) =
+                                                zip.write_entry_stream(builder).await
+                                            {
+                                                let mut compat_writer =
+                                                    (&mut entry_writer).compat_write();
+                                                let _ =
+                                                    tokio::io::copy(&mut file, &mut compat_writer)
+                                                        .await;
                                                 let _ = entry_writer.close().await;
                                             }
                                         }
@@ -382,22 +403,27 @@ async fn download_handler(
                     }
                     let _ = zip.close().await;
                 });
-                
+
                 return Response::builder()
                     .header(header::CONTENT_TYPE, "application/zip")
-                    .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", f.name))
+                    .header(
+                        header::CONTENT_DISPOSITION,
+                        format!("attachment; filename=\"{}\"", f.name),
+                    )
                     .body(body)
                     .unwrap();
             }
 
             let mut file = match tokio::fs::File::open(path).await {
                 Ok(f) => f,
-                Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Cannot read file").into_response(),
+                Err(_) => {
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Cannot read file").into_response()
+                }
             };
 
             let range_header = headers.get(header::RANGE).and_then(|h| h.to_str().ok());
             let file_size = f.size;
-            
+
             if let Some(range) = range_header {
                 if range.starts_with("bytes=") {
                     let parts: Vec<&str> = range["bytes=".len()..].split('-').collect();
@@ -410,11 +436,12 @@ async fn download_handler(
                             };
 
                             if start <= end && end < file_size {
-                                use tokio::io::{AsyncSeekExt, AsyncReadExt};
+                                use tokio::io::{AsyncReadExt, AsyncSeekExt};
                                 if let Err(_) = file.seek(std::io::SeekFrom::Start(start)).await {
-                                    return (StatusCode::INTERNAL_SERVER_ERROR, "Seek error").into_response();
+                                    return (StatusCode::INTERNAL_SERVER_ERROR, "Seek error")
+                                        .into_response();
                                 }
-                                
+
                                 let length = end - start + 1;
                                 let stream = tokio_util::io::ReaderStream::new(file.take(length));
                                 let body = axum::body::Body::from_stream(stream);
@@ -422,9 +449,15 @@ async fn download_handler(
                                 return Response::builder()
                                     .status(StatusCode::PARTIAL_CONTENT)
                                     .header(header::CONTENT_TYPE, "application/octet-stream")
-                                    .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", f.name))
+                                    .header(
+                                        header::CONTENT_DISPOSITION,
+                                        format!("attachment; filename=\"{}\"", f.name),
+                                    )
                                     .header(header::CONTENT_LENGTH, length)
-                                    .header(header::CONTENT_RANGE, format!("bytes {}-{}/{}", start, end, file_size))
+                                    .header(
+                                        header::CONTENT_RANGE,
+                                        format!("bytes {}-{}/{}", start, end, file_size),
+                                    )
                                     .header(header::ACCEPT_RANGES, "bytes")
                                     .body(body)
                                     .unwrap();
@@ -439,7 +472,10 @@ async fn download_handler(
 
             Response::builder()
                 .header(header::CONTENT_TYPE, "application/octet-stream")
-                .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", f.name))
+                .header(
+                    header::CONTENT_DISPOSITION,
+                    format!("attachment; filename=\"{}\"", f.name),
+                )
                 .header(header::CONTENT_LENGTH, f.size)
                 .header(header::ACCEPT_RANGES, "bytes")
                 .body(body)
@@ -455,7 +491,7 @@ async fn download_all_handler(
     AxumState(state): AxumState<Arc<QrcState>>,
 ) -> Response {
     let token = query.token.unwrap_or_default();
-    
+
     let session = state.session.read().await;
     let files = match &*session {
         Some(sess) if sess.token == token && !sess.is_expired() => sess.shared_files.clone(),
@@ -470,19 +506,21 @@ async fn download_all_handler(
     let (mut tx, rx) = tokio::io::duplex(1024 * 1024 * 4);
     let stream = tokio_util::io::ReaderStream::new(rx);
     let body = axum::body::Body::from_stream(stream);
-    
+
     tokio::spawn(async move {
         use tokio_util::compat::FuturesAsyncWriteCompatExt;
         let mut zip = async_zip::base::write::ZipFileWriter::with_tokio(&mut tx);
-        
+
         for f in files {
             let path = std::path::PathBuf::from(&f.path);
-            if !path.exists() { continue; }
-            
+            if !path.exists() {
+                continue;
+            }
+
             if path.is_dir() {
                 let mut dirs = vec![path.clone()];
                 let base_path = path.parent().unwrap_or(&path).to_path_buf();
-                
+
                 while let Some(dir) = dirs.pop() {
                     if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
                         while let Ok(Some(entry)) = entries.next_entry().await {
@@ -494,12 +532,16 @@ async fn download_all_handler(
                                     let name = rel_path.to_string_lossy().into_owned();
                                     let builder = async_zip::ZipEntryBuilder::new(
                                         async_zip::ZipString::from(name),
-                                        async_zip::Compression::Deflate
+                                        async_zip::Compression::Deflate,
                                     );
                                     if let Ok(mut file) = tokio::fs::File::open(&entry_path).await {
-                                        if let Ok(mut entry_writer) = zip.write_entry_stream(builder).await {
-                                            let mut compat_writer = (&mut entry_writer).compat_write();
-                                            let _ = tokio::io::copy(&mut file, &mut compat_writer).await;
+                                        if let Ok(mut entry_writer) =
+                                            zip.write_entry_stream(builder).await
+                                        {
+                                            let mut compat_writer =
+                                                (&mut entry_writer).compat_write();
+                                            let _ = tokio::io::copy(&mut file, &mut compat_writer)
+                                                .await;
                                             let _ = entry_writer.close().await;
                                         }
                                     }
@@ -511,7 +553,7 @@ async fn download_all_handler(
             } else {
                 let builder = async_zip::ZipEntryBuilder::new(
                     async_zip::ZipString::from(f.name.clone()),
-                    async_zip::Compression::Deflate
+                    async_zip::Compression::Deflate,
                 );
                 if let Ok(mut file) = tokio::fs::File::open(&path).await {
                     if let Ok(mut entry_writer) = zip.write_entry_stream(builder).await {
@@ -524,10 +566,13 @@ async fn download_all_handler(
         }
         let _ = zip.close().await;
     });
-    
+
     Response::builder()
         .header(header::CONTENT_TYPE, "application/zip")
-        .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"TichPhong_Share.zip\""))
+        .header(
+            header::CONTENT_DISPOSITION,
+            format!("attachment; filename=\"TichPhong_Share.zip\""),
+        )
         .body(body)
         .unwrap()
 }
@@ -561,10 +606,7 @@ async fn upload_handler(
         .unwrap_or(0);
 
     while let Ok(Some(mut field)) = multipart.next_field().await {
-        let file_name = field
-            .file_name()
-            .unwrap_or("unknown")
-            .to_string();
+        let file_name = field.file_name().unwrap_or("unknown").to_string();
 
         let upload_id = uuid::Uuid::new_v4().to_string();
         let temp_path = temp_dir.join(&upload_id);
@@ -618,13 +660,16 @@ async fn upload_handler(
 
             let mut actual_size = 0u64;
             let mut last_emit = std::time::Instant::now();
-            
+
             while let Ok(Some(chunk)) = field.chunk().await {
-                if tokio::io::AsyncWriteExt::write_all(&mut file, &chunk).await.is_err() {
+                if tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
+                    .await
+                    .is_err()
+                {
                     break;
                 }
                 actual_size += chunk.len() as u64;
-                
+
                 if last_emit.elapsed().as_millis() > 100 {
                     let _ = state.app_handle.emit(
                         "qrc-upload-progress",
@@ -673,8 +718,8 @@ async fn upload_handler(
 
 /// Start QR Connect server, returns the QR URL
 pub async fn start(
-    app_handle: AppHandle, 
-    download_dir: String, 
+    app_handle: AppHandle,
+    download_dir: String,
     mode: String,
     alias: String,
     theme: String,
@@ -720,7 +765,9 @@ pub async fn start(
 
     tokio::spawn(async move {
         axum::serve(listener, app.into_make_service())
-            .with_graceful_shutdown(async { let _ = cancel_rx.await; })
+            .with_graceful_shutdown(async {
+                let _ = cancel_rx.await;
+            })
             .await
             .ok();
     });
@@ -728,12 +775,12 @@ pub async fn start(
     let mut ip = local_ip_address::local_ip()
         .map(|ip| ip.to_string())
         .unwrap_or_else(|_| "127.0.0.1".to_string());
-        
+
     let mut wifi_qr = None;
 
     if mode == "direct" {
         ip = "10.42.0.1".to_string();
-        
+
         if let Ok(output) = std::process::Command::new("nmcli")
             .args(&["-t", "-f", "active,ssid", "dev", "wifi"])
             .output()
@@ -743,14 +790,21 @@ pub async fn start(
                 if line.starts_with("yes:") {
                     let ssid = line[4..].to_string();
                     let pass_output = std::process::Command::new("nmcli")
-                        .args(&["-s", "-g", "802-11-wireless-security.psk", "connection", "show", &ssid])
+                        .args(&[
+                            "-s",
+                            "-g",
+                            "802-11-wireless-security.psk",
+                            "connection",
+                            "show",
+                            &ssid,
+                        ])
                         .output()
                         .ok();
-                    
+
                     let pass = pass_output
                         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
                         .unwrap_or_default();
-                        
+
                     wifi_qr = Some(format!("WIFI:T:WPA;S:{};P:{};;", ssid, pass));
                     break;
                 }
@@ -795,12 +849,12 @@ pub async fn share_files(state: &QrcState, file_paths: Vec<String>) {
             .to_string_lossy()
             .into_owned();
         let mut size = std::fs::metadata(&path_str).map(|m| m.len()).unwrap_or(0);
-        
+
         if path.is_dir() {
             name.push_str(".zip");
             size = 0; // Unknown size due to dynamic stream
         }
-        
+
         let id = uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string();
 
         shared.push(QrcSharedFile {

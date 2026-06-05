@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2024 TichPhong OS / doccosau
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -1897,8 +1914,9 @@ function App() {
                     <div className="bg-white/5 p-5 rounded-xl border border-white/5">
                       <h3 className="text-orange-400 font-bold text-lg mb-2 flex items-center gap-2"><Info className="w-4 h-4" /> {t("Thông tin Giấy phép", "License Information")}</h3>
                       <p className="text-gray-400">
-                        {t("TichPhong Share được phát triển độc quyền cho Hệ điều hành TichPhong OS.", "TichPhong Share is exclusively developed for TichPhong OS.")}<br/>
-                        {t("Sử dụng mã nguồn mở LocalSend/rqs (MIT License) để đảm bảo tính minh bạch và bảo mật mã hóa đầu cuối.", "Uses open-source LocalSend/rqs (MIT License) to ensure transparency and end-to-end encryption security.")}
+                        {t("TichPhong Share được phân phối dưới giấy phép GNU GPL v3.", "TichPhong Share is distributed under the GNU GPL v3 License.")}<br/>
+                        <span className="text-emerald-400">{t("Mã nguồn mở và hoàn toàn miễn phí.", "Open-source and completely free.")}</span><br/>
+                        {t("Sử dụng mã nguồn mở LocalSend/rqs (MIT License) kết hợp giao thức độc quyền TichPhong Direct.", "Uses open-source LocalSend/rqs (MIT License) combined with the exclusive TichPhong Direct protocol.")}
                       </p>
                     </div>
                   </div>
