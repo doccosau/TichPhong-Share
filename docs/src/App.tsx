@@ -25,10 +25,11 @@ export default function App() {
 
   const faqs = [
     { q: "TichPhong Share có miễn phí không?", a: "Hoàn toàn miễn phí. Phần mềm được phát triển dưới dạng mã nguồn mở và sẽ luôn miễn phí, không có quảng cáo." },
-    { q: "Tôi có cần kết nối Internet để gửi file?", a: "Không cần. TichPhong Share truyền dữ liệu qua mạng cục bộ (LAN hoặc Wi-Fi). Thậm chí bạn có thể phát Wi-Fi Hotspot từ điện thoại để kết nối trực tiếp với máy tính ở nơi không có mạng." },
+    { q: "Tôi có cần kết nối Internet để gửi file?", a: "Không cần. TichPhong Share truyền dữ liệu qua mạng cục bộ (LAN hoặc Wi-Fi). Với chế độ Direct Mode, PC phát Hotspot riêng để điện thoại kết nối trực tiếp — hoạt động ở bất kỳ đâu, không cần router." },
     { q: "Tốc độ truyền tải tối đa là bao nhiêu?", a: "Tốc độ phụ thuộc vào router Wi-Fi hoặc cáp mạng LAN của bạn. Với Wi-Fi 5/6, tốc độ có thể đạt từ 30MB/s đến hơn 100MB/s, nhanh hơn rất nhiều so với Bluetooth." },
-    { q: "TichPhong Share sử dụng công nghệ gì?", a: "Chúng tôi phát triển giao thức TichPhong Direct (được bảo vệ bởi GPLv3) tối ưu cho TichPhong OS. Đồng thời, ứng dụng kế thừa và tương thích ngược với mạng lưới của Quick Share (rqs - GPLv3) và LocalSend (Apache 2.0) giúp kết nối chéo với mọi thiết bị Android/iOS dễ dàng." },
-    { q: "Phiên bản 2.0 khi nào ra mắt?", a: "Phiên bản 2.0 (với tính năng QR Connect và TichPhong Direct) đang trong giai đoạn hoàn thiện cuối cùng và sẽ sớm được phát hành trên GitHub (Coming Soon)." }
+    { q: "QR Connect là gì?", a: "QR Connect cho phép quét mã QR trên PC bằng điện thoại để mở giao diện web chia sẻ file 2 chiều — không cần cài app. Hỗ trợ 2 chế độ: LAN Mode (chung mạng) và Direct Mode (PC phát Hotspot)." },
+    { q: "TichPhong Share sử dụng công nghệ gì?", a: "Ứng dụng xây dựng trên Tauri v2 (Rust + React), sử dụng giao thức TichPhong Direct (WebSocket + HTTP) cho QR Connect, đồng thời tương thích Quick Share (rqs - GPLv3) và LocalSend (Apache 2.0)." },
+    { q: "Phiên bản 2.0 khi nào ra mắt?", a: "Phiên bản 2.0 (với tính năng QR Connect, Direct Mode, upload 2 bước, nhận diện thiết bị) đang trong giai đoạn hoàn thiện cuối cùng và sẽ sớm được phát hành trên GitHub (Coming Soon)." }
   ];
 
   return (
@@ -182,12 +183,12 @@ export default function App() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: QrCode, title: 'QR Connect (V2.0)', desc: 'Tính năng sắp ra mắt: Dùng camera điện thoại quét mã QR trên PC và gửi/nhận file trực tiếp qua trình duyệt web trên di động không cần cài app.' },
-              { icon: Zap, title: 'Tốc Độ Ánh Sáng', desc: 'Khai thác tối đa băng thông mạng LAN của bạn. Chuyển tệp tin hàng Gigabyte chỉ trong vài giây, nhanh hơn chục lần so với Bluetooth.' },
-              { icon: MonitorSmartphone, title: 'Tương Thích Cao', desc: 'Hỗ trợ kết nối với các thiết bị Android, Windows qua chuẩn Quick Share (Nearby Connections) & LocalSend.' },
-              { icon: WifiOff, title: 'Hoạt Động Offline', desc: 'Không cần kết nối Internet. Chỉ cần các thiết bị ở chung một mạng Wi-Fi, cáp LAN, hoặc thậm chí là phát Hotspot từ điện thoại.' },
-              { icon: Shield, title: 'Bảo Mật Cục Bộ', desc: 'Mã hóa đầu cuối TLS vững chắc. Dữ liệu truyền trực tiếp P2P giữa các thiết bị, không đi qua máy chủ đám mây.' },
-              { icon: Rocket, title: 'Tối Ưu & Siêu Nhẹ', desc: 'Xây dựng trên nền tảng Rust và Tauri v2, ngốn cực ít RAM (dưới 50MB) và chạy mượt mà ngay cả trên PC đời cũ.' }
+              { icon: QrCode, title: 'QR Connect (V2.0)', desc: 'Sắp ra mắt: Quét mã QR trên PC bằng điện thoại → trình duyệt mở giao diện web → chia sẻ file 2 chiều không cần cài app. Hỗ trợ LAN Mode và Direct Mode (PC phát Hotspot).' },
+              { icon: Zap, title: 'Tốc Độ Ánh Sáng', desc: 'Khai thác tối đa băng thông mạng LAN. Chuyển tệp tin hàng Gigabyte chỉ trong vài giây, nhanh hơn chục lần so với Bluetooth.' },
+              { icon: MonitorSmartphone, title: 'Tương Thích Đa Nền Tảng', desc: 'Kết nối Android, Windows qua Quick Share (Nearby Connections) & LocalSend. Kết nối mọi thiết bị khác qua QR Connect trên trình duyệt.' },
+              { icon: Shield, title: 'Upload An Toàn 2 Bước', desc: 'Điện thoại gửi yêu cầu → PC duyệt hoặc từ chối → file mới được truyền. Không file nào được lưu khi chưa được phê duyệt rõ ràng.' },
+              { icon: WifiOff, title: 'Direct Mode — Không Cần Router', desc: 'PC tự phát Wi-Fi Hotspot riêng. Điện thoại quét QR để kết nối trực tiếp — hoạt động ở bất kỳ đâu, ngay cả nơi không có Internet.' },
+              { icon: Rocket, title: 'Siêu Nhẹ — Dưới 50MB RAM', desc: 'Xây dựng trên Rust và Tauri v2, tối ưu cực độ. WebApp di động hỗ trợ song ngữ Việt-Anh, giữ sáng màn hình khi truyền file, có haptic feedback.' }
             ].map((feature, i) => (
               <motion.div 
                 key={i}
@@ -298,7 +299,7 @@ export default function App() {
             
             <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 ">Sẵn sàng <span className="font-charm text-tp-primary">trải nghiệm?</span></h2>
             <p className="text-xl text-tp-subtext mb-12 max-w-2xl mx-auto font-medium">
-              Tải xuống bản ổn định ngay hôm nay, hoặc đón chờ phiên bản 2.0.0 cực khủng với tính năng QR Connect.
+              Tải xuống bản ổn định ngay hôm nay, hoặc đón chờ phiên bản 2.0.0 với QR Connect, Direct Mode và upload 2 bước.
             </p>
             
             <div className="flex flex-col md:flex-row justify-center gap-6">
@@ -321,7 +322,7 @@ export default function App() {
             <div className="mt-8 flex justify-center gap-4">
               <div className="px-6 py-3 rounded-xl bg-yellow-500/10 text-yellow-700 font-bold border border-yellow-500/20 flex items-center gap-2">
                  <Package size={18} />
-                 Bản V2.0.0 (QR Connect) đang được hoàn thiện, Coming Soon!
+                 Bản V2.0.0 (QR Connect + Direct Mode + Upload 2 bước) — Coming Soon!
               </div>
             </div>
             

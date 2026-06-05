@@ -18,7 +18,7 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        Path, Query, State as AxumState, WebSocketUpgrade,
+        DefaultBodyLimit, Path, Query, State as AxumState, WebSocketUpgrade,
     },
     http::{header, StatusCode},
     response::{Html, IntoResponse, Response},
@@ -54,7 +54,6 @@ pub struct QrcPendingUpload {
     pub id: String,
     pub name: String,
     pub size: u64,
-    pub temp_path: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -66,18 +65,27 @@ pub enum QrcEvent {
     /// Phone disconnected
     #[serde(rename = "device_disconnected")]
     DeviceDisconnected,
+    /// List of connected devices updated
+    #[serde(rename = "devices_updated")]
+    DevicesUpdated { devices: Vec<String> },
     /// PC shared new files (sent to phone)
     #[serde(rename = "files_available")]
     FilesAvailable { files: Vec<QrcFileInfo> },
     /// Phone uploaded a file, pending PC approval (sent to PC)
     #[serde(rename = "upload_request")]
     UploadRequest { id: String, name: String, size: u64 },
+    /// Notify other phones that a device is sending to PC
+    #[serde(rename = "upload_broadcast")]
+    UploadBroadcast { device_name: String, file_name: String },
     /// PC accepted upload (sent to phone)
     #[serde(rename = "upload_accepted")]
     UploadAccepted { id: String },
     /// PC rejected upload (sent to phone)
     #[serde(rename = "upload_rejected")]
     UploadRejected { id: String },
+    /// PC intentionally closed the session
+    #[serde(rename = "session_closed")]
+    SessionClosed,
     /// Session status ping
     #[serde(rename = "status")]
     Status {
@@ -94,13 +102,25 @@ pub struct QrcFileInfo {
     pub size: u64,
 }
 
+#[derive(Deserialize)]
+#[serde(tag = "type")]
+enum WsClientMessage {
+    #[serde(rename = "request_upload")]
+    RequestUpload { id: String, name: String, size: u64 },
+    #[serde(rename = "device_info")]
+    DeviceInfo {
+        #[serde(rename = "userAgent")]
+        user_agent: Option<String>,
+    },
+}
+
 // ─── Session State ───────────────────────────────────────────────────────────
 
 pub struct QrcSession {
     pub token: String,
     pub shared_files: Vec<QrcSharedFile>,
     pub pending_uploads: HashMap<String, QrcPendingUpload>,
-    pub connected_device: Option<String>,
+    pub connected_devices: HashMap<String, String>,
     pub created_at: std::time::Instant,
 }
 
@@ -110,7 +130,7 @@ impl QrcSession {
             token,
             shared_files: Vec::new(),
             pending_uploads: HashMap::new(),
-            connected_device: None,
+            connected_devices: HashMap::new(),
             created_at: std::time::Instant::now(),
         }
     }
@@ -124,7 +144,6 @@ pub struct QrcState {
     pub app_handle: AppHandle,
     pub session: RwLock<Option<QrcSession>>,
     pub event_tx: broadcast::Sender<String>,
-    pub upload_approvals: AsyncMutex<HashMap<String, tokio::sync::oneshot::Sender<bool>>>,
     pub download_dir: String,
     pub cancel_tx: AsyncMutex<Option<tokio::sync::oneshot::Sender<()>>>,
     pub alias: String,
@@ -196,8 +215,7 @@ async fn websocket_handler(
 async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
     let (mut ws_tx, mut ws_rx) = socket.split();
     let mut event_rx = state.event_tx.subscribe();
-
-    // Wait for the phone to send its User-Agent first before marking it as connected.
+    let client_id = uuid::Uuid::new_v4().to_string();
 
     // Send current file list to newly connected phone
     {
@@ -222,7 +240,6 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
     }
 
     // Broadcast events to this WebSocket client
-    let _state_clone = state.clone();
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = event_rx.recv().await {
             if ws_tx.send(Message::Text(msg.into())).await.is_err() {
@@ -233,55 +250,100 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
 
     // Receive messages from phone (Device Recognition)
     let state_clone = state.clone();
+    let client_id_clone = client_id.clone();
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = ws_rx.next().await {
             match msg {
                 Message::Text(text) => {
-                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&text) {
-                        if parsed["type"] == "device_info" {
-                            let mut device_name = parsed["userAgent"]
-                                .as_str()
-                                .unwrap_or("Mobile Browser")
-                                .to_string();
+                    if let Ok(msg) = serde_json::from_str::<WsClientMessage>(&text) {
+                        match msg {
+                            WsClientMessage::DeviceInfo { user_agent } => {
+                                let mut device_name = user_agent
+                                    .unwrap_or_else(|| "Mobile Browser".to_string());
 
-                            // Simple User-Agent parser for nicer display
-                            if device_name.contains("iPhone") {
-                                device_name = "Apple iPhone".to_string();
-                            } else if device_name.contains("iPad") {
-                                device_name = "Apple iPad".to_string();
-                            } else if device_name.contains("Android") {
-                                let parts: Vec<&str> = device_name.split("Android").collect();
-                                if parts.len() > 1 {
-                                    let sub_parts: Vec<&str> = parts[1].split(';').collect();
-                                    if sub_parts.len() > 1 {
-                                        let model = sub_parts[1].trim();
-                                        device_name = format!(
-                                            "Android ({})",
-                                            model.split(" Build/").next().unwrap_or(model)
-                                        );
+                                // Simple User-Agent parser for nicer display
+                                if device_name.contains("iPhone") {
+                                    device_name = "Apple iPhone".to_string();
+                                } else if device_name.contains("iPad") {
+                                    device_name = "Apple iPad".to_string();
+                                } else if device_name.contains("Android") {
+                                    let parts: Vec<&str> = device_name.split("Android").collect();
+                                    if parts.len() > 1 {
+                                        let sub_parts: Vec<&str> = parts[1].split(';').collect();
+                                        if sub_parts.len() > 1 {
+                                            let model = sub_parts[1].trim();
+                                            device_name = format!(
+                                                "Android ({})",
+                                                model.split(" Build/").next().unwrap_or(model)
+                                            );
+                                        } else {
+                                            device_name = "Android Device".to_string();
+                                        }
                                     } else {
                                         device_name = "Android Device".to_string();
                                     }
-                                } else {
-                                    device_name = "Android Device".to_string();
+                                }
+
+                                let mut current_devices = Vec::new();
+                                // Update session
+                                {
+                                    let mut session = state_clone.session.write().await;
+                                    if let Some(ref mut sess) = *session {
+                                        sess.connected_devices.insert(client_id_clone.clone(), device_name.clone());
+                                        current_devices = sess.connected_devices.values().cloned().collect();
+                                    }
+                                }
+
+                                // Notify PC
+                                let _ = state_clone.app_handle.emit(
+                                    "qrc-devices-updated",
+                                    serde_json::json!({
+                                        "devices": current_devices
+                                    }),
+                                );
+
+                                // Broadcast to all WebApps
+                                let event = QrcEvent::DevicesUpdated { devices: current_devices };
+                                if let Ok(json) = serde_json::to_string(&event) {
+                                    let _ = state_clone.event_tx.send(json);
                                 }
                             }
-
-                            // Update session
-                            {
-                                let mut session = state_clone.session.write().await;
-                                if let Some(ref mut sess) = *session {
-                                    sess.connected_device = Some(device_name.clone());
+                            WsClientMessage::RequestUpload { id, name, size } => {
+                                let pending = QrcPendingUpload {
+                                    id: id.clone(),
+                                    name: name.clone(),
+                                    size,
+                                };
+                                
+                                let mut current_device_name = "Mobile Browser".to_string();
+                                {
+                                    let mut session = state_clone.session.write().await;
+                                    if let Some(ref mut sess) = *session {
+                                        sess.pending_uploads.insert(id.clone(), pending);
+                                        if let Some(dn) = sess.connected_devices.get(&client_id_clone) {
+                                            current_device_name = dn.clone();
+                                        }
+                                    }
+                                }
+                                
+                                let _ = state_clone.app_handle.emit(
+                                    "qrc-upload-request",
+                                    serde_json::json!({
+                                        "id": id,
+                                        "name": name,
+                                        "size": size,
+                                        "device_name": current_device_name,
+                                    }),
+                                );
+                                
+                                let event = QrcEvent::UploadBroadcast {
+                                    device_name: current_device_name.clone(),
+                                    file_name: name,
+                                };
+                                if let Ok(json) = serde_json::to_string(&event) {
+                                    let _ = state_clone.event_tx.send(json);
                                 }
                             }
-
-                            // Notify PC
-                            let _ = state_clone.app_handle.emit(
-                                "qrc-device-connected",
-                                serde_json::json!({
-                                    "device": device_name
-                                }),
-                            );
                         }
                     }
                 }
@@ -298,14 +360,28 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
     }
 
     // Mark device as disconnected
+    let mut current_devices = Vec::new();
     {
         let mut session = state.session.write().await;
         if let Some(ref mut sess) = *session {
-            sess.connected_device = None;
+            sess.connected_devices.remove(&client_id);
+            current_devices = sess.connected_devices.values().cloned().collect();
         }
     }
+    
+    // Notify PC
+    let _ = state.app_handle.emit(
+        "qrc-devices-updated",
+        serde_json::json!({
+            "devices": current_devices
+        }),
+    );
 
-    let _ = state.app_handle.emit("qrc-device-disconnected", ());
+    // Broadcast to all WebApps
+    let event = QrcEvent::DevicesUpdated { devices: current_devices };
+    if let Ok(json) = serde_json::to_string(&event) {
+        let _ = state.event_tx.send(json);
+    }
 }
 
 /// List available files (for web app)
@@ -576,10 +652,16 @@ async fn download_all_handler(
         .unwrap()
 }
 
+#[derive(Deserialize)]
+struct UploadQuery {
+    token: Option<String>,
+    id: Option<String>,
+}
+
 /// Upload a file from phone to PC
 async fn upload_handler(
-    Query(query): Query<TokenQuery>,
-    headers: axum::http::HeaderMap,
+    Query(query): Query<UploadQuery>,
+    _headers: axum::http::HeaderMap,
     AxumState(state): AxumState<Arc<QrcState>>,
     mut multipart: axum::extract::Multipart,
 ) -> Response {
@@ -594,118 +676,114 @@ async fn upload_handler(
         }
     }
 
-    let temp_dir = PathBuf::from(&state.download_dir).join(".tichphong_tmp");
-    let _ = std::fs::create_dir_all(&temp_dir);
+    let upload_id = match &query.id {
+        Some(id) => {
+            // Validate that this upload was approved via WebSocket
+            let session = state.session.read().await;
+            let is_valid = match &*session {
+                Some(sess) => sess.pending_uploads.contains_key(id),
+                None => false,
+            };
+            if !is_valid {
+                return (StatusCode::FORBIDDEN, "Upload not approved").into_response();
+            }
+            id.clone()
+        }
+        None => return (StatusCode::BAD_REQUEST, "Missing upload id").into_response(),
+    };
 
-    // Get expected size from headers
-    let total_size_header = headers
-        .get("X-File-Size")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.parse::<u64>().ok())
-        .unwrap_or(0);
+    let _ = tokio::fs::create_dir_all(&state.download_dir).await;
 
     while let Ok(Some(mut field)) = multipart.next_field().await {
         let file_name = field.file_name().unwrap_or("unknown").to_string();
-
-        let upload_id = uuid::Uuid::new_v4().to_string();
-        let temp_path = temp_dir.join(&upload_id);
-
-        let pending = QrcPendingUpload {
-            id: upload_id.clone(),
-            name: file_name.clone(),
-            size: total_size_header,
-            temp_path: temp_path.to_string_lossy().into_owned(),
-        };
-
-        // Store pending upload
-        {
-            let mut session = state.session.write().await;
-            if let Some(ref mut sess) = *session {
-                sess.pending_uploads.insert(upload_id.clone(), pending);
+        
+        // Avoid overwriting existing files by adding (1), (2), etc.
+        let mut target_path = PathBuf::from(&state.download_dir).join(&file_name);
+        if target_path.exists() {
+            let stem = std::path::Path::new(&file_name)
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let ext_str = std::path::Path::new(&file_name)
+                .extension()
+                .map(|e| format!(".{}", e.to_string_lossy()))
+                .unwrap_or_default();
+            let mut counter = 1;
+            loop {
+                let new_name = format!("{} ({}){}", stem, counter, ext_str);
+                target_path = PathBuf::from(&state.download_dir).join(&new_name);
+                if !target_path.exists() {
+                    break;
+                }
+                counter += 1;
             }
         }
 
-        // Create approval channel
-        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
-        state
-            .upload_approvals
-            .lock()
-            .await
-            .insert(upload_id.clone(), tx);
+        let mut file = match tokio::fs::File::create(&target_path).await {
+            Ok(f) => f,
+            Err(_) => continue,
+        };
 
-        // Notify PC IMMEDIATELY via Tauri event (Realtime)
+        let mut actual_size = 0u64;
+        let mut last_emit = std::time::Instant::now();
+
+        while let Ok(Some(chunk)) = field.chunk().await {
+            if tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
+                .await
+                .is_err()
+            {
+                break;
+            }
+            actual_size += chunk.len() as u64;
+
+            if last_emit.elapsed().as_millis() > 100 {
+                let _ = state.app_handle.emit(
+                    "qrc-upload-progress",
+                    serde_json::json!({
+                        "id": upload_id,
+                        "loaded": actual_size,
+                    }),
+                );
+                last_emit = std::time::Instant::now();
+            }
+        }
+
+        // Notify PC that the actual transfer is complete
         let _ = state.app_handle.emit(
-            "qrc-upload-request",
+            "qrc-upload-complete",
             serde_json::json!({
                 "id": upload_id,
                 "name": file_name,
-                "size": total_size_header
+                "size": actual_size,
+                "time": chrono::Local::now().format("%H:%M:%S").to_string()
             }),
         );
-
-        // Wait for PC user to accept or reject BEFORE streaming the chunks
-        let accepted = tokio::time::timeout(std::time::Duration::from_secs(300), rx)
-            .await
-            .ok()
-            .and_then(|r| r.ok())
-            .unwrap_or(false);
-
-        if accepted {
-            // PC accepted! Now we stream the file chunks to disk.
-            let mut file = match tokio::fs::File::create(&temp_path).await {
-                Ok(f) => f,
-                Err(_) => continue,
-            };
-
-            let mut actual_size = 0u64;
-            let mut last_emit = std::time::Instant::now();
-
-            while let Ok(Some(chunk)) = field.chunk().await {
-                if tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
-                    .await
-                    .is_err()
-                {
-                    break;
-                }
-                actual_size += chunk.len() as u64;
-
-                if last_emit.elapsed().as_millis() > 100 {
-                    let _ = state.app_handle.emit(
-                        "qrc-upload-progress",
-                        serde_json::json!({
-                            "id": upload_id,
-                            "loaded": actual_size,
-                        }),
-                    );
-                    last_emit = std::time::Instant::now();
-                }
-            }
-
-            // Move file to final download dir
-            let dest = PathBuf::from(&state.download_dir).join(&file_name);
-            let _ = tokio::fs::create_dir_all(&state.download_dir);
-            let _ = std::fs::rename(&temp_path, &dest);
-
-            // Notify PC that the actual transfer is complete
-            let _ = state.app_handle.emit(
-                "qrc-upload-complete",
-                serde_json::json!({
-                    "id": upload_id,
-                    "name": file_name,
-                    "size": actual_size,
-                    "time": chrono::Local::now().format("%H:%M:%S").to_string()
-                }),
-            );
-        } else {
-            // Clean up temp file
-            let _ = std::fs::remove_file(&temp_path);
-        }
-
-        // Clean up pending upload
+        
+        // Add to shared_files so other devices can download it
+        let new_shared = QrcSharedFile {
+            id: upload_id.clone(),
+            name: file_name.clone(),
+            size: actual_size,
+            path: target_path.to_string_lossy().into_owned(),
+        };
         {
             let mut session = state.session.write().await;
             if let Some(ref mut sess) = *session {
-                sess.pending_uploads.remove(&upload_id);
+                sess.shared_files.push(new_shared);
+            }
+        }
+        
+        // Broadcast updated files list
+        if let Some(sess) = &*state.session.read().await {
+            let files: Vec<QrcFileInfo> = sess.shared_files.iter().map(|f| QrcFileInfo {
+                id: f.id.clone(),
+                name: f.name.clone(),
+                size: f.size,
+            }).collect();
+            let event = QrcEvent::FilesAvailable { files };
+            if let Ok(json) = serde_json::to_string(&event) {
+                let _ = state.event_tx.send(json);
             }
         }
     }
@@ -739,7 +817,6 @@ pub async fn start(
         app_handle,
         session: RwLock::new(Some(session)),
         event_tx,
-        upload_approvals: AsyncMutex::new(HashMap::new()),
         download_dir,
         cancel_tx: AsyncMutex::new(None),
         alias,
@@ -757,6 +834,7 @@ pub async fn start(
         .route("/qrc/upload", post(upload_handler))
         .route("/qrc/assets/icon.png", get(icon_handler))
         .with_state(state.clone())
+        .layer(DefaultBodyLimit::disable())
         .layer(CorsLayer::permissive());
 
     let (cancel_tx, cancel_rx) = tokio::sync::oneshot::channel::<()>();
@@ -780,35 +858,32 @@ pub async fn start(
     if mode == "direct" {
         ip = "10.42.0.1".to_string();
 
-        if let Ok(output) = std::process::Command::new("nmcli")
-            .args(&["-t", "-f", "active,ssid", "dev", "wifi"])
-            .output()
-        {
-            let out_str = String::from_utf8_lossy(&output.stdout);
-            for line in out_str.lines() {
-                if line.starts_with("yes:") {
-                    let ssid = line[4..].to_string();
-                    let pass_output = std::process::Command::new("nmcli")
-                        .args(&[
-                            "-s",
-                            "-g",
-                            "802-11-wireless-security.psk",
-                            "connection",
-                            "show",
-                            &ssid,
-                        ])
-                        .output()
-                        .ok();
+        let id = uuid::Uuid::new_v4().to_string()[..4].to_uppercase();
+        let ssid = format!("TichPhong Share {}", id);
+        let pass = uuid::Uuid::new_v4().to_string()[..8].to_string();
+        let con_name = "TichPhong-Share-Direct";
 
-                    let pass = pass_output
-                        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-                        .unwrap_or_default();
+        // Clean up any existing connection with this name
+        let _ = std::process::Command::new("nmcli")
+            .args(&["connection", "delete", con_name])
+            .output();
 
-                    wifi_qr = Some(format!("WIFI:T:WPA;S:{};P:{};;", ssid, pass));
-                    break;
-                }
-            }
-        }
+        // Create new hotspot profile
+        let _ = std::process::Command::new("nmcli")
+            .args(&["connection", "add", "type", "wifi", "ifname", "*", "con-name", con_name, "autoconnect", "false", "ssid", &ssid])
+            .output();
+
+        // Configure as AP with WPA2
+        let _ = std::process::Command::new("nmcli")
+            .args(&["connection", "modify", con_name, "802-11-wireless.mode", "ap", "802-11-wireless.band", "bg", "ipv4.method", "shared", "802-11-wireless-security.key-mgmt", "wpa-psk", "802-11-wireless-security.psk", &pass])
+            .output();
+
+        // Activate it
+        let _ = std::process::Command::new("nmcli")
+            .args(&["connection", "up", con_name])
+            .output();
+
+        wifi_qr = Some(format!("WIFI:T:WPA;S:{};P:{};;", ssid, pass));
     }
 
     let url = format!("http://{}:{}/s/{}", ip, port, token);
@@ -818,11 +893,30 @@ pub async fn start(
 
 /// Stop QR Connect server
 pub async fn stop(state: &QrcState) {
+    // Broadcast session closed to all connected webapps
+    let event = QrcEvent::SessionClosed;
+    if let Ok(json) = serde_json::to_string(&event) {
+        let _ = state.event_tx.send(json);
+    }
+    
+    // Give websockets 50ms to flush the message before killing server
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
     // Send cancel signal
     let mut cancel = state.cancel_tx.lock().await;
     if let Some(tx) = cancel.take() {
         let _ = tx.send(());
     }
+
+    // Stop Hotspot if active
+    let _ = std::process::Command::new("nmcli")
+        .args(&["connection", "down", "TichPhong-Share-Direct"])
+        .output();
+
+    // Clean up Hotspot profile
+    let _ = std::process::Command::new("nmcli")
+        .args(&["connection", "delete", "TichPhong-Share-Direct"])
+        .output();
 
     // Clear session
     *state.session.write().await = None;
@@ -890,24 +984,26 @@ pub async fn share_files(state: &QrcState, file_paths: Vec<String>) {
 
 /// Accept a pending upload from phone
 pub async fn accept_upload(state: &QrcState, upload_id: String) -> Result<(), String> {
-    let mut approvals = state.upload_approvals.lock().await;
-    if let Some(tx) = approvals.remove(&upload_id) {
-        let _ = tx.send(true);
-        Ok(())
-    } else {
-        Err("Upload not found".into())
+    let event = QrcEvent::UploadAccepted { id: upload_id };
+    if let Ok(json) = serde_json::to_string(&event) {
+        let _ = state.event_tx.send(json);
     }
+    Ok(())
 }
 
 /// Reject a pending upload from phone
 pub async fn reject_upload(state: &QrcState, upload_id: String) -> Result<(), String> {
-    let mut approvals = state.upload_approvals.lock().await;
-    if let Some(tx) = approvals.remove(&upload_id) {
-        let _ = tx.send(false);
-        Ok(())
-    } else {
-        Err("Upload not found".into())
+    {
+        let mut session = state.session.write().await;
+        if let Some(ref mut sess) = *session {
+            sess.pending_uploads.remove(&upload_id);
+        }
     }
+    let event = QrcEvent::UploadRejected { id: upload_id };
+    if let Ok(json) = serde_json::to_string(&event) {
+        let _ = state.event_tx.send(json);
+    }
+    Ok(())
 }
 
 pub async fn qrc_update_theme(state: &QrcState, theme: String, accent: String) {

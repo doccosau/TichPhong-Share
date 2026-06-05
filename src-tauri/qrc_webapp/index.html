@@ -14,6 +14,7 @@
     --tp-accent: #10b981;
     --tp-accent-hover: #059669;
     --tp-accent-light: rgba(16, 185, 129, 0.1);
+    --tp-accent-alpha: rgba(16, 185, 129, 0.15);
     --tp-danger: #ef4444;
     --tp-danger-light: rgba(239, 68, 68, 0.1);
     --tp-nav-bg: rgba(255, 255, 255, 0.9);
@@ -174,6 +175,9 @@
       <div class="dot pulse"></div> <span data-i18n="connecting">Đang kết nối</span>
     </div>
   </div>
+  <div class="status-row" id="connected-devices-row" style="display:none; margin-top: 12px; gap: 8px; overflow-x: auto; padding-bottom: 4px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+    <!-- Connected devices injected here -->
+  </div>
 </header>
 
 <main class="container">
@@ -182,7 +186,7 @@
   <div id="tab-receive" class="tab-content active">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <h2 style="font-size: 16px;" data-i18n="from_pc">Từ PC của bạn</h2>
-      <button class="btn btn-primary" style="padding: 8px 14px; font-size: 13px;" onclick="downloadAll()" id="btn-download-all" style="display:none;">
+      <button class="btn btn-primary" style="padding: 8px 14px; font-size: 13px; display:none;" onclick="downloadAll()" id="btn-download-all">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span data-i18n="download_all">Tải tất cả</span>
       </button>
@@ -439,7 +443,10 @@ function showToast(msg, isSuccess = true) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = 'toast';
-  toast.innerHTML = isSuccess ? `✅ ${msg}` : `❌ ${msg}`;
+  const icon = isSuccess ? 
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : 
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  toast.innerHTML = `<div style="display:flex;align-items:center;gap:6px;">${icon} ${msg}</div>`;
   if (!isSuccess) {
     toast.style.background = 'var(--tp-danger)';
     toast.style.color = 'white';
@@ -500,10 +507,15 @@ function connectWebSocket() {
 
   ws = new WebSocket(WS_URL);
 
-  ws.onopen = () => {
-    badge.className = 'badge';
-    badge.innerHTML = `<div class="dot"></div> ${tl('connected')}`;
-    if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
+  ws.onopen = async () => {
+    badge.className = 'badge success';
+    badge.innerHTML = `<div class="dot" style="background:var(--tp-accent);box-shadow:0 0 8px var(--tp-accent)"></div> ${tl('connected')}`;
+    clearInterval(reconnectTimer);
+    reconnectTimer = null;
+    fetchFiles();
+    
+    // Keep screen always on while connected
+    await requestWakeLock();
     
     // Send Device Info for Recognition
     ws.send(JSON.stringify({
@@ -520,20 +532,125 @@ function connectWebSocket() {
       if (event.type === 'files_available') {
         renderFiles(event.files || []);
         showToast(tl('pc_refresh'));
-      }
-      if (event.type === 'upload_accepted') {
+      } else if (event.type === 'devices_updated') {
+        const row = document.getElementById('connected-devices-row');
+        if (event.devices && event.devices.length > 0) {
+          row.style.display = 'flex';
+          
+          let myDeviceName = "Mobile Browser";
+          const ua = navigator.userAgent;
+          if (ua.includes("iPhone")) myDeviceName = "Apple iPhone";
+          else if (ua.includes("iPad")) myDeviceName = "Apple iPad";
+          else if (ua.includes("Android")) {
+            const parts = ua.split("Android");
+            if (parts.length > 1) {
+              const subParts = parts[1].split(";");
+              if (subParts.length > 1) {
+                const model = subParts[1].trim().split(" Build/")[0];
+                myDeviceName = `Android (${model})`;
+              } else myDeviceName = "Android Device";
+            } else myDeviceName = "Android Device";
+          }
+          
+          let myDeviceFound = false;
+          row.innerHTML = event.devices.map(d => {
+            let isMe = false;
+            if (!myDeviceFound && d.startsWith(myDeviceName)) {
+              isMe = true;
+              myDeviceFound = true;
+            }
+            return `<div style="display:flex; align-items:center; gap:4px; font-size:11px; background:${isMe ? 'var(--tp-accent-alpha)' : 'rgba(255,255,255,0.1)'}; color:${isMe ? 'var(--tp-accent)' : 'inherit'}; padding:4px 8px; border-radius:12px; white-space:nowrap; border: ${isMe ? '1px solid var(--tp-accent)' : '1px solid transparent'}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              ${d} ${isMe ? '(Bạn)' : ''}
+            </div>`;
+          }).join('');
+        } else {
+          row.style.display = 'none';
+        }
+      } else if (event.type === 'upload_accepted') {
         const el = document.getElementById(`status-text-${event.id}`);
         if(el) el.textContent = tl('pc_accepted');
+        if (navigator.vibrate) try { navigator.vibrate(50); } catch(e){}
+        
+        if (window.pendingFiles && window.pendingFiles[event.id]) {
+          const file = window.pendingFiles[event.id];
+          delete window.pendingFiles[event.id];
+          
+          if(el) el.textContent = "Đang gửi...";
+          
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `${API_BASE}/qrc/upload?token=${TOKEN}&id=${event.id}`, true);
+          xhr.setRequestHeader('X-File-Size', file.size.toString());
+          
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              const fillEl = document.getElementById(`fill-${event.id}`);
+              const metaEl = document.getElementById(`meta-${event.id}`);
+              if (fillEl) fillEl.style.width = `${percent}%`;
+              if (metaEl) metaEl.textContent = `${percent}% (${formatSize(e.loaded)} / ${formatSize(e.total)})`;
+            }
+          };
+          
+          xhr.onload = () => {
+            const itemEl = document.getElementById(`upload-item-${event.id}`);
+            if (!itemEl) return;
+            if (xhr.status === 200) {
+              itemEl.innerHTML = `<div class="progress-header" style="color:var(--tp-accent)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> ${tl('sent_ok')}: ${escapeHtml(file.name)}</div>`;
+              showToast(`${tl('sent_toast')}: ${file.name}`);
+              if (navigator.vibrate) try { navigator.vibrate(50); } catch(e){}
+            } else {
+              itemEl.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ${tl('sent_err')}: ${escapeHtml(file.name)}</div>`;
+            }
+            setTimeout(() => itemEl.remove(), 4000);
+            // Release wake lock when no more pending files
+            if (!window.pendingFiles || Object.keys(window.pendingFiles).length === 0) releaseWakeLock();
+          };
+          
+          xhr.onerror = () => {
+            const itemEl = document.getElementById(`upload-item-${event.id}`);
+            if (!itemEl) return;
+            itemEl.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ${tl('network_err')}: ${escapeHtml(file.name)}</div>`;
+            setTimeout(() => itemEl.remove(), 4000);
+            if (!window.pendingFiles || Object.keys(window.pendingFiles).length === 0) releaseWakeLock();
+          };
+          
+          xhr.send(formData);
+        }
+      } else if (event.type === 'upload_broadcast') {
+        showToast(`<div style="display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> ${event.device_name} đang gửi file cho PC: ${event.file_name}</div>`);
+      } else if (event.type === 'session_closed') {
+        document.body.innerHTML = `
+          <div style="height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(248,113,113,0.1); color: var(--tp-danger); display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/><path d="M4 4l16 16"/></svg>
+            </div>
+            <h2 style="margin-bottom: 12px; font-size: 20px;">Phiên đã kết thúc</h2>
+            <p style="color: var(--tp-text-muted); font-size: 14px; line-height: 1.5;">PC đã ngắt kết nối TichPhong Share.<br>Vui lòng đóng trình duyệt này.</p>
+          </div>
+        `;
+        if (ws) ws.close();
       }
       if (event.type === 'upload_rejected') {
         const el = document.getElementById(`upload-item-${event.id}`);
         if(el) {
-          el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ ${tl('pc_rejected')}</div>`;
+          el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ${tl('pc_rejected')}</div>`;
           setTimeout(()=>el.remove(), 4000);
+          if (navigator.vibrate) try { navigator.vibrate([100, 50, 100]); } catch(e){}
         }
       }
       if (event.type === 'theme_update') {
         const root = document.documentElement;
+        let metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (!metaTheme) {
+          metaTheme = document.createElement('meta');
+          metaTheme.name = 'theme-color';
+          document.head.appendChild(metaTheme);
+        }
+        
         if (event.theme === 'dark') {
           root.style.setProperty('--tp-bg', '#1a1b1e');
           root.style.setProperty('--tp-surface', '#25262b');
@@ -541,6 +658,7 @@ function connectWebSocket() {
           root.style.setProperty('--tp-text', '#c1c2c5');
           root.style.setProperty('--tp-text-muted', '#909296');
           root.style.setProperty('--tp-border', '#373a40');
+          metaTheme.content = '#1a1b1e';
         } else {
           root.style.setProperty('--tp-bg', '#f8f9fa');
           root.style.setProperty('--tp-surface', '#ffffff');
@@ -548,6 +666,7 @@ function connectWebSocket() {
           root.style.setProperty('--tp-text', '#212529');
           root.style.setProperty('--tp-text-muted', '#868e96');
           root.style.setProperty('--tp-border', '#e9ecef');
+          metaTheme.content = '#f8f9fa';
         }
         
         const accentMap = {
@@ -569,6 +688,7 @@ function connectWebSocket() {
   ws.onclose = () => {
     badge.className = 'badge error';
     badge.innerHTML = `<div class="dot"></div> ${tl('disconnected')}`;
+    releaseWakeLock(); // Allow screen to sleep when disconnected
     if (!reconnectTimer) reconnectTimer = setInterval(() => connectWebSocket(), 3000);
   };
   ws.onerror = () => ws.close();
@@ -708,45 +828,24 @@ async function startUploads() {
     `;
     container.prepend(el);
     
-    // Upload via XHR for progress tracking
-    const formData = new FormData();
-    formData.append('file', file);
+    // Wait for PC via WebSocket
+    if (!window.pendingFiles) window.pendingFiles = {};
+    window.pendingFiles[uploadId] = file;
     
-    await new Promise(resolve => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${API_BASE}/qrc/upload?token=${TOKEN}`, true);
-      xhr.setRequestHeader('X-File-Size', file.size.toString());
-      
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const percent = Math.round((e.loaded / e.total) * 100);
-          document.getElementById(`fill-${uploadId}`).style.width = `${percent}%`;
-          document.getElementById(`meta-${uploadId}`).textContent = `${percent}% (${formatSize(e.loaded)} / ${formatSize(e.total)})`;
-        }
-      };
-      
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          el.innerHTML = `<div class="progress-header" style="color:var(--tp-accent)">✅ ${tl('sent_ok')}: ${escapeHtml(file.name)}</div>`;
-          showToast(`${tl('sent_toast')}: ${file.name}`);
-        } else {
-          el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ ${tl('sent_err')}: ${escapeHtml(file.name)}</div>`;
-        }
-        setTimeout(() => el.remove(), 4000);
-        resolve();
-      };
-      
-      xhr.onerror = () => {
-        el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">❌ ${tl('network_err')}: ${escapeHtml(file.name)}</div>`;
-        setTimeout(() => el.remove(), 4000);
-        resolve();
-      };
-      
-      xhr.send(formData);
-    });
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'request_upload',
+        id: uploadId,
+        name: file.name,
+        size: file.size
+      }));
+    } else {
+      el.innerHTML = `<div class="progress-header" style="color:var(--tp-danger)">Không có kết nối WS</div>`;
+      setTimeout(() => el.remove(), 4000);
+    }
   }
-  
-  releaseWakeLock(); // Allow screen to sleep again
+  // Note: releaseWakeLock is NOT called here because uploads happen asynchronously
+  // after PC accepts. It will be released when the last XHR completes in upload_accepted handler.
 }
 
 // --- INITIALIZATION ---

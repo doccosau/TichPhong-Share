@@ -196,14 +196,22 @@ function App() {
   const [latestVersion, setLatestVersion] = useState('');
   const [releaseUrl, setReleaseUrl] = useState('');
 
+  // Toast Notification State
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // QR Connect State
   const [qrcActive, setQrcActive] = useState(false);
   const [qrcMode, setQrcMode] = useState<'lan' | 'direct'>('lan');
   const [qrcUrl, setQrcUrl] = useState('');
   const [qrcWifiQr, setQrcWifiQr] = useState<string | null>(null);
-  const [qrcConnectedDevice, setQrcConnectedDevice] = useState<string | null>(null);
+  const [qrcConnectedDevices, setQrcConnectedDevices] = useState<string[]>([]);
   const [qrcSharedFiles, setQrcSharedFiles] = useState<string[]>([]);
-  const [qrcPendingUploads, setQrcPendingUploads] = useState<{id: string, name: string, size: number}[]>([]);
+  const [qrcPendingUploads, setQrcPendingUploads] = useState<{id: string, name: string, size: number, device_name?: string}[]>([]);
   const [qrcActiveUploads, setQrcActiveUploads] = useState<{id: string, name: string, loaded: number, total: number}[]>([]);
   const [qrcReceivedFiles, setQrcReceivedFiles] = useState<{name: string, time: string}[]>([]);
 
@@ -519,14 +527,14 @@ function App() {
 
   // QR Connect event listeners
   useEffect(() => {
-    const unlistenQrcConnected = listen('qrc-device-connected', (event: any) => {
-      setQrcConnectedDevice(event.payload?.device || 'Mobile Browser');
+    const unlistenQrcConnected = listen<{ devices: string[] }>('qrc-devices-updated', (event) => {
+      setQrcConnectedDevices(event.payload.devices || []);
     });
-    const unlistenQrcDisconnected = listen('qrc-device-disconnected', () => {
-      setQrcConnectedDevice(null);
-    });
-    const unlistenQrcUploadRequest = listen<{id: string, name: string, size: number}>('qrc-upload-request', async (event) => {
-      setQrcPendingUploads(prev => [...prev, event.payload]);
+    const unlistenQrcUploadRequest = listen<{id: string, name: string, size: number, device_name?: string}>('qrc-upload-request', async (event) => {
+      setQrcPendingUploads(prev => {
+        if (prev.some(u => u.id === event.payload.id)) return prev;
+        return [...prev, event.payload];
+      });
       setActiveTab('qrconnect');
       try {
         const win = getCurrentWindow();
@@ -534,7 +542,7 @@ function App() {
         await win.show();
         await win.setFocus();
       } catch (e) { console.error(e); }
-      triggerOSNotification('QR Connect', `Có file gửi từ thiết bị: ${event.payload.name}`);
+      triggerOSNotification('QR Connect', `Yêu cầu gửi file từ: ${event.payload.device_name || 'Thiết bị di động'}`);
     });
     const unlistenQrcUploadProgress = listen<{id: string, loaded: number}>('qrc-upload-progress', (event) => {
       setQrcActiveUploads(prev => prev.map(u => u.id === event.payload.id ? { ...u, loaded: event.payload.loaded } : u));
@@ -557,7 +565,6 @@ function App() {
     });
     return () => {
       unlistenQrcConnected.then(f => f());
-      unlistenQrcDisconnected.then(f => f());
       unlistenQrcUploadRequest.then(f => f());
       unlistenQrcUploadProgress.then(f => f());
       unlistenQrcUploadComplete.then(f => f());
@@ -766,7 +773,7 @@ function App() {
           >
             <Zap className="w-5 h-5 shrink-0" />
             <span className="font-medium hidden md:block truncate">QR Connect</span>
-            {qrcConnectedDevice && <span className="absolute top-2 right-2 md:relative md:top-auto md:right-auto w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>}
+            {qrcConnectedDevices.length > 0 && <span className="absolute top-2 right-2 md:relative md:top-auto md:right-auto w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>}
           </button>
           <button 
             onClick={() => setActiveTab("portal")}
@@ -1060,7 +1067,19 @@ function App() {
                                   <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
                                     <QRCode value={qrcWifiQr} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
                                   </div>
-                                  <p className="mt-3 text-sm font-semibold text-tichphong-blue">1. {t("Kết nối Wi-Fi", "Connect Wi-Fi")}</p>
+                                  <p className="mt-3 text-sm font-semibold text-tichphong-blue">1. {t("Kết nối Hotspot", "Connect Hotspot")}</p>
+                                  
+                                  {/* Display Hotspot Info for manual connection */}
+                                  <div className="mt-2 text-xs text-gray-400 bg-white/5 border border-white/10 rounded-lg p-2.5 w-full max-w-[232px]">
+                                    <div className="flex justify-between items-center mb-1.5">
+                                      <span className="font-medium">Hotspot:</span>
+                                      <code className="text-white select-all">{qrcWifiQr.match(/S:([^;]+)/)?.[1] || ''}</code>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span className="font-medium">Pass:</span>
+                                      <code className="text-white select-all">{qrcWifiQr.match(/P:([^;]+)/)?.[1] || ''}</code>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
                               <div className="flex flex-col items-center">
@@ -1074,7 +1093,7 @@ function App() {
                                   <div className="flex items-center gap-2 mt-2">
                                     <code className="text-xs text-gray-500 break-all text-center max-w-[160px]">{qrcUrl}</code>
                                     <button 
-                                      onClick={() => navigator.clipboard.writeText(qrcUrl).then(() => alert(t("Đã copy link!", "Link copied!")))}
+                                      onClick={() => navigator.clipboard.writeText(qrcUrl).then(() => showToast(t("Đã copy link!", "Link copied!"), 'success'))}
                                       className="text-gray-400 hover:text-white"
                                       title="Copy Link"
                                     >
@@ -1094,16 +1113,36 @@ function App() {
     
                         {/* Status + Controls */}
                         <div className="flex-1 flex flex-col gap-4 w-full">
-                          <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/5">
-                            <div className={`w-3 h-3 rounded-full ${qrcConnectedDevice ? 'bg-green-400 animate-pulse' : qrcActive ? 'bg-yellow-400 animate-pulse' : 'bg-gray-600'}`}></div>
-                            <div>
-                              <p className="font-medium text-sm">
-                                {qrcConnectedDevice ? `📱 ${t("Đã kết nối:", "Connected:")} ${qrcConnectedDevice}` : qrcActive ? t("Đang chờ kết nối...", "Waiting for connection...") : t("Chưa hoạt động", "Inactive")}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-0.5">
-                                {qrcActive ? t("Điện thoại quét mã QR để kết nối", "Phone scans QR code to connect") : t("Bấm Bắt đầu để tạo phiên mới", "Press Start to create a new session")}
-                              </p>
+                          <div className="flex flex-col gap-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${qrcConnectedDevices.length > 0 ? 'bg-green-400 animate-pulse' : qrcActive ? 'bg-yellow-400 animate-pulse' : 'bg-gray-600'}`}></div>
+                              <div>
+                                <p className="font-medium text-sm">
+                                  <span className={`font-semibold tracking-wide ${qrcConnectedDevices.length > 0 ? 'text-green-400' : qrcActive ? 'text-yellow-400' : 'text-gray-400'}`}>
+                                    {qrcConnectedDevices.length > 0 ? (
+                                      <span className="flex items-center gap-1.5">
+                                        <Smartphone className="w-4 h-4" /> {t("Đã kết nối:", "Connected:")} {qrcConnectedDevices.length} thiết bị
+                                      </span>
+                                    ) : qrcActive ? t("Đang chờ kết nối...", "Waiting for connection...") 
+                                      : t("Chưa hoạt động", "Inactive")}
+                                  </span>
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {qrcActive ? t("Điện thoại quét mã QR để kết nối", "Phone scans QR code to connect") : t("Bấm Bắt đầu để tạo phiên mới", "Press Start to create a new session")}
+                                </p>
+                              </div>
                             </div>
+
+                            {qrcConnectedDevices.length > 0 && (
+                              <div className="mt-1 pt-3 border-t border-white/5 flex flex-wrap gap-2">
+                                {qrcConnectedDevices.map((device, idx) => (
+                                  <div key={idx} className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white shadow-sm">
+                                    <Smartphone className="w-3.5 h-3.5 text-tichphong-blue" />
+                                    {device}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
     
                           {!qrcActive ? (
@@ -1130,11 +1169,11 @@ function App() {
                                     setQrcWifiQr(res.wifi_qr);
                                     setQrcActive(true);
                                     setQrcSharedFiles([]);
-                                    setQrcConnectedDevice(null);
+                                    setQrcConnectedDevices([]);
                                     setQrcPendingUploads([]);
                                     setQrcReceivedFiles([]);
                                   } catch (e: any) { 
-                                    alert(e.toString());
+                                    showToast(e.toString(), 'error');
                                     console.error(e); 
                                   }
                                 }}
@@ -1151,7 +1190,7 @@ function App() {
                                   setQrcActive(false);
                                   setQrcUrl('');
                                   setQrcWifiQr(null);
-                                  setQrcConnectedDevice(null);
+                                  setQrcConnectedDevices([]);
                                   setQrcSharedFiles([]);
                                 } catch (e) { console.error(e); }
                               }}
@@ -1224,7 +1263,7 @@ function App() {
                       <div className="p-4 border-b border-yellow-500/20 flex items-center gap-3" style={{ background: 'rgba(234,179,8,0.08)' }}>
                         <div className="w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center animate-bounce"><Download className="w-5 h-5" /></div>
                         <div>
-                          <h2 className="font-bold text-yellow-400 text-base">{t("📱 File từ thiết bị di động", "📱 Files from Mobile")}</h2>
+                          <h2 className="font-bold text-yellow-400 text-base flex items-center gap-2"><Smartphone className="w-5 h-5" /> {t("File từ thiết bị di động", "Files from Mobile")}</h2>
                           <p className="text-xs text-gray-400">{t("Có file chờ duyệt, vui lòng chấp nhận hoặc từ chối", "Pending files, please accept or decline")}</p>
                         </div>
                       </div>
@@ -1232,10 +1271,18 @@ function App() {
                         {qrcPendingUploads.map(upload => (
                           <div key={upload.id} className="flex flex-col gap-3 bg-white/5 p-4 rounded-xl border border-white/10">
                             <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                              <FileIcon className="w-6 h-6 text-yellow-400 shrink-0" />
-                              <div className="flex-1 overflow-hidden min-w-0">
-                                <p className="font-semibold text-sm truncate">{upload.name}</p>
-                                <p className="text-xs text-gray-500">{formatSize(upload.size)}</p>
+                              <div className="flex flex-col gap-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Smartphone className="w-4 h-4 text-tichphong-blue" />
+                                  <p className="font-medium text-sm text-tichphong-blue truncate">{upload.device_name || "Thiết bị di động"}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <FileIcon className="w-5 h-5 text-yellow-400 shrink-0" />
+                                  <div className="flex-1 overflow-hidden min-w-0">
+                                    <p className="font-semibold text-sm truncate">{upload.name}</p>
+                                    <p className="text-xs text-gray-500">{formatSize(upload.size)}</p>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -1344,7 +1391,7 @@ function App() {
                             invoke("open_ftp", { ftpUrl: ftpAddress })
                               .catch(err => {
                                 console.error(err);
-                                alert(t("Không thể mở FTP: ", "Cannot open FTP: ") + err);
+                                showToast(t("Không thể mở FTP: ", "Cannot open FTP: ") + err, 'error');
                               });
                           }
                         }}
@@ -1382,9 +1429,9 @@ function App() {
                       <button 
                         onClick={() => {
                           if (!webdavStatus) {
-                            invoke("start_webdav").then(() => setWebdavStatus(true)).catch(err => alert(t("Lỗi: ", "Error: ") + err));
+                            invoke("start_webdav").then(() => setWebdavStatus(true)).catch(err => showToast(t("Lỗi: ", "Error: ") + err, 'error'));
                           } else {
-                            invoke("stop_webdav").then(() => setWebdavStatus(false)).catch(err => alert(t("Lỗi: ", "Error: ") + err));
+                            invoke("stop_webdav").then(() => setWebdavStatus(false)).catch(err => showToast(t("Lỗi: ", "Error: ") + err, 'error'));
                           }
                         }}
                         className={`${webdavStatus ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-purple-500 hover:bg-purple-600 text-[#ffffff]'} px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2`}
@@ -2156,6 +2203,29 @@ function App() {
           </AnimatePresence>
         </div>
       </div>
+      
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className={`fixed bottom-6 left-1/2 z-[100] px-4 py-2.5 rounded-xl shadow-xl shadow-black/20 text-sm font-medium border flex items-center gap-2 ${
+              toast.type === 'error' 
+                ? 'bg-red-500/10 border-red-500/20 text-red-400 backdrop-blur-md' 
+                : 'bg-white/10 border-white/10 text-white backdrop-blur-md'
+            }`}
+          >
+            {toast.type === 'error' ? (
+              <XCircle className="w-4 h-4 text-red-400" />
+            ) : (
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+            )}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
