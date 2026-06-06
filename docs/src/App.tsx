@@ -29,7 +29,7 @@ export default function App() {
     { q: "Tốc độ truyền tải tối đa là bao nhiêu?", a: "Tốc độ phụ thuộc vào router Wi-Fi hoặc cáp mạng LAN của bạn. Với Wi-Fi 5/6, tốc độ có thể đạt từ 30MB/s đến hơn 100MB/s, nhanh hơn rất nhiều so với Bluetooth." },
     { q: "QR Connect là gì?", a: "QR Connect cho phép quét mã QR trên PC để mở giao diện web chia sẻ file 2 chiều — không cần cài app. Tính năng hỗ trợ nhiều thiết bị kết nối cùng lúc, tự nhận diện thiết bị thông minh (gắn mã #ID cho PC), và tự hủy phiên an toàn sau 30 phút không hoạt động." },
     { q: "TichPhong Share sử dụng công nghệ gì?", a: "Ứng dụng xây dựng trên Tauri v2 (Rust + React), sử dụng giao thức TichPhong Direct (WebSocket + HTTP) cho QR Connect, đồng thời tương thích Quick Share (rqs - GPLv3) và LocalSend (Apache 2.0)." },
-    { q: "Phiên bản 2.0 khi nào ra mắt?", a: "Phiên bản 2.0 (với QR Connect, Direct Mode, upload 2 bước an toàn, nhận diện tên thiết bị chi tiết và quản lý phiên tự động) đang trong giai đoạn hoàn thiện cuối cùng và sẽ sớm được phát hành trên GitHub (Coming Soon)." }
+    { q: "TichPhong Share có lộ trình phát triển như thế nào?", a: "TichPhong Share liên tục được cập nhật. Tính năng QR Connect, Direct Mode, upload 2 bước an toàn, nhận diện tên thiết bị chi tiết và quản lý phiên tự động luôn được hoàn thiện và phát hành chính thức thường xuyên." }
   ];
 
   return (
@@ -49,6 +49,7 @@ export default function App() {
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-tp-subtext hover:text-tp-primary font-medium transition-colors">Tính năng</a>
+            <a href="#architecture" className="text-tp-subtext hover:text-tp-primary font-medium transition-colors">Kiến trúc</a>
             <a href="#how-it-works" className="text-tp-subtext hover:text-tp-primary font-medium transition-colors">Hướng dẫn</a>
             <a href="#faq" className="text-tp-subtext hover:text-tp-primary font-medium transition-colors">Hỏi đáp</a>
           </div>
@@ -71,7 +72,7 @@ export default function App() {
           >
             <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass-card text-tp-primary font-bold text-sm mb-10 border-tp-primary/20 hover:border-tp-primary/40 transition-colors shadow-sm">
               <Rocket size={16} />
-              <span className="uppercase tracking-wider text-xs">V2.0.0 Coming Soon - <span className="font-charm text-base lowercase tracking-normal">Đột phá mới</span></span>
+              <span className="uppercase tracking-wider text-xs">Giải pháp truyền tải P2P - <span className="font-charm text-base lowercase tracking-normal">Đột phá mới</span></span>
             </motion.div>
             
             <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-charm font-bold tracking-tight text-tp-text mb-8 leading-[1.05] ">
@@ -150,8 +151,8 @@ export default function App() {
                 <div className="absolute top-6 left-6 glass-card px-4 py-2 rounded-xl flex items-center gap-3 animate-float-delayed backdrop-blur-3xl shadow-xl border-white/50 bg-white/90">
                    <div className="w-8 h-8 rounded-full bg-tp-primary/20 flex items-center justify-center text-tp-primary"><QrCode size={20}/></div>
                    <div>
-                     <div className="text-xs font-bold text-tp-text">Phiên bản 2.0</div>
-                     <div className="text-[10px] text-tp-subtext">Coming Soon</div>
+                     <div className="text-xs font-bold text-tp-text">Tính năng mới</div>
+                     <div className="text-[10px] text-tp-subtext">QR Connect</div>
                    </div>
                 </div>
               </div>
@@ -183,7 +184,7 @@ export default function App() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: QrCode, title: 'QR Connect (V2.0)', desc: 'Quét mã QR trên PC để mở WebApp và chia sẻ 2 chiều mà không cần cài app. Hỗ trợ nhiều thiết bị cùng lúc (Data Hub), tự động nhận diện tên máy, và quản lý phiên làm việc thông minh (Inactivity Timeout).' },
+              { icon: QrCode, title: 'QR Connect', desc: 'Quét mã QR trên PC để mở WebApp và chia sẻ 2 chiều mà không cần cài app. Hỗ trợ nhiều thiết bị cùng lúc (Data Hub), tự động nhận diện tên máy, và quản lý phiên làm việc thông minh (Inactivity Timeout).' },
               { icon: Zap, title: 'Tốc Độ Ánh Sáng', desc: 'Khai thác tối đa băng thông mạng LAN. Chuyển tệp tin hàng Gigabyte chỉ trong vài giây, nhanh hơn chục lần so với Bluetooth.' },
               { icon: MonitorSmartphone, title: 'Tương Thích Đa Nền Tảng', desc: 'Kết nối Android, Windows qua Quick Share & LocalSend. Kết nối mọi thiết bị khác qua QR Connect. Tự động gắn mã #ID cho các PC để tránh nhầm lẫn khi làm việc nhóm.' },
               { icon: Shield, title: 'Upload An Toàn 2 Bước', desc: 'Điện thoại gửi yêu cầu → PC duyệt hoặc từ chối → file mới được truyền. Không file nào được lưu khi chưa được phê duyệt rõ ràng.' },
@@ -205,6 +206,73 @@ export default function App() {
                 <p className="text-tp-subtext leading-relaxed font-medium">{feature.desc}</p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Architecture Section */}
+      <section id="architecture" className="py-24 relative z-10 bg-tp-base">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16 relative z-10">
+             <div className="text-tp-primary font-bold uppercase tracking-widest text-sm mb-3">Chuyên sâu kỹ thuật</div>
+             <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 tracking-tight ">Kiến trúc <span className="text-gradient font-charm font-bold">Hệ thống</span></h2>
+             <p className="text-xl text-tp-subtext max-w-3xl mx-auto font-medium">TichPhong Share được xây dựng trên sự kết hợp tối ưu giữa Rust (Tauri) cho hiệu năng tuyệt đối và React cho trải nghiệm mượt mà.</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12">
+             <motion.div 
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="space-y-8"
+             >
+                <div className="glass-card p-8 rounded-3xl bg-white/50 hover:bg-white transition-colors">
+                   <h3 className="text-2xl font-bold text-tp-text mb-4 flex items-center gap-3"><Terminal size={24} className="text-tp-primary" /> Core Protocols & Mạng</h3>
+                   <ul className="space-y-4 text-tp-subtext font-medium">
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>TichPhong Direct (QR Connect):</b> HTTP Web Server nội bộ (Axum) phục vụ React WebApp, hỗ trợ Upload 2 chiều qua mạng LAN/Hotspot, giới hạn file linh hoạt và tự động ngắt kết nối (Inactivity Timeout).</span></li>
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>Giao thức LocalSend:</b> Tương thích 100% với chuẩn LocalSend qua giao thức mDNS/HTTPS RESTful.</span></li>
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>Giao thức Quick Share:</b> Hỗ trợ truyền siêu tốc giữa PC và thiết bị Android, kết hợp mDNS và offline transfer.</span></li>
+                   </ul>
+                </div>
+                
+                <div className="glass-card p-8 rounded-3xl bg-white/50 hover:bg-white transition-colors">
+                   <h3 className="text-2xl font-bold text-tp-text mb-4 flex items-center gap-3"><Shield size={24} className="text-tp-primary" /> Bảo mật & Toàn vẹn dữ liệu</h3>
+                   <ul className="space-y-4 text-tp-subtext font-medium">
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>2-Step Upload:</b> Phê duyệt luồng truyền tải minh bạch (Client request ➔ PC approve ➔ Transfer).</span></li>
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>Smart User-Agent:</b> Phân tích tự động chính xác tên, loại thiết bị và trình duyệt (Windows/Linux/iOS/Android).</span></li>
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>Smart Port Fallback:</b> Tự động đổi cổng mạng nếu cổng mặc định (53317, 8080) bị chiếm dụng, giữ kết nối ổn định.</span></li>
+                   </ul>
+                </div>
+             </motion.div>
+             
+             <motion.div 
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="space-y-8"
+             >
+                <div className="glass-card p-8 rounded-3xl bg-white/50 hover:bg-white transition-colors">
+                   <h3 className="text-2xl font-bold text-tp-text mb-4 flex items-center gap-3"><Monitor size={24} className="text-tp-primary" /> Tích hợp Hệ điều hành (OS)</h3>
+                   <ul className="space-y-4 text-tp-subtext font-medium">
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>Windows Context Menu:</b> Nhấn chuột phải <i>"Gửi qua TichPhong Share"</i> để thao tác truyền file trực tiếp từ Windows Explorer.</span></li>
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>System Tray Lifecycle:</b> Chạy ngầm bền bỉ dưới khay hệ thống, luôn trong trạng thái sẵn sàng nhận file mà không tốn tài nguyên hiển thị UI.</span></li>
+                      <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-tp-primary shrink-0 mt-0.5" /> <span><b>Direct Mode (Wi-Fi Hotspot):</b> Vượt qua giới hạn không có router bằng cách khởi tạo mạng AP trực tiếp từ thiết bị nguồn.</span></li>
+                   </ul>
+                </div>
+                
+                <div className="glass-card p-8 rounded-3xl bg-white/50 hover:bg-white transition-colors h-full flex flex-col justify-center relative overflow-hidden group">
+                   <div className="absolute inset-0 bg-gradient-to-br from-tp-primary/5 to-tp-accent/10 group-hover:scale-105 transition-transform duration-500"></div>
+                   <div className="relative z-10 text-center">
+                     <div className="w-20 h-20 mx-auto bg-white rounded-full flex items-center justify-center shadow-xl shadow-tp-primary/20 text-tp-primary mb-6">
+                        <Code size={40} />
+                     </div>
+                     <h4 className="text-xl font-bold text-tp-text mb-3">Thiết kế Light Jade</h4>
+                     <p className="text-tp-subtext font-medium leading-relaxed">
+                        Giao diện trực quan lấy cảm hứng từ Ngọc Bích, theo dõi tiến trình với real-time WebSocket, hỗ trợ đa ngôn ngữ và Accessibility tiêu chuẩn cao nhất.
+                     </p>
+                   </div>
+                </div>
+             </motion.div>
           </div>
         </div>
       </section>
@@ -299,7 +367,7 @@ export default function App() {
             
             <h2 className="text-4xl md:text-5xl font-black text-tp-text mb-6 ">Sẵn sàng <span className="font-charm text-tp-primary">trải nghiệm?</span></h2>
             <p className="text-xl text-tp-subtext mb-12 max-w-2xl mx-auto font-medium">
-              Tải xuống bản ổn định ngay hôm nay, hoặc đón chờ phiên bản 2.0.0 với QR Connect, Direct Mode và upload 2 bước.
+              Tải xuống bản ổn định ngay hôm nay, trải nghiệm công nghệ QR Connect, Direct Mode và upload 2 bước an toàn.
             </p>
             
             <div className="flex flex-col md:flex-row justify-center gap-6">
@@ -322,7 +390,7 @@ export default function App() {
             <div className="mt-8 flex justify-center gap-4">
               <div className="px-6 py-3 rounded-xl bg-yellow-500/10 text-yellow-700 font-bold border border-yellow-500/20 flex items-center gap-2">
                  <Package size={18} />
-                 Bản V2.0.0 (QR Connect + Direct Mode + Upload 2 bước) — Coming Soon!
+                 Luôn cập nhật liên tục: QR Connect + Direct Mode + Upload 2 bước
               </div>
             </div>
             
