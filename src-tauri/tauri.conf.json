@@ -40,6 +40,7 @@
       "icons/icon.ico"
     ],
     "publisher": "TichPhongOS Team",
+    "copyright": "Copyright © 2026 TichPhong OS Team. All rights reserved.",
     "shortDescription": "Ứng dụng chia sẻ file nhanh chóng đa nền tảng cho TichPhongOS",
     "longDescription": "TichPhong Share là một ứng dụng chia sẻ file đa nền tảng (PC, Mobile) bảo mật, nhanh chóng dựa trên giao thức Quick Share và LocalSend.",
     "category": "Utility"
