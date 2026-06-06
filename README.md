@@ -15,12 +15,13 @@ TichPhong Share is an ultra-fast, open-source file sharing application built wit
 
 - ⚡ **High Speed**: Transfer files over LAN with no file size limits. Wi-Fi 5/6 can reach 30–100+ MB/s.
 - 📱 **High Compatibility**: Supports **LocalSend** and **Google Quick Share** protocols, making it easy to transfer files directly to Android, Windows, and other devices.
-- 📸 **QR Connect (TichPhong Direct)**: Scan QR on PC to share files bidirectionally via WebApp—no app installation needed. 
+- 📸 **QR Connect (TichPhong Direct)**: Embedded WebApp Server - No app installation required for receivers. Scan QR on PC to share files bidirectionally via browser.
+  - **Connection Modes**: **LAN Mode** (existing network) and **Direct Hotspot** (PC creates a secure Wi-Fi network automatically via `nmcli` or `netsh`).
   - **Data Hub Model**: Supports multiple devices (phones, laptops) connecting to a single PC simultaneously.
-  - **Smart Device ID**: Detects specific mobile models (e.g., `Android (Pixel 7)`) and automatically adds a unique `#ID` to PC names for group sharing.
-  - **Inactivity Timeout**: Sessions auto-terminate only after 30 minutes of complete inactivity from all connected devices.
-  - **Smart Port Fallback**: Prioritizes user-configured ports, gracefully falling back to a random port if occupied.
-  - **Network Options**: Supports **LAN Mode** (same network) and **Direct Mode** (PC creates Hotspot, no router needed).
+  - **Smart User-Agent Parsing**: Accurately detects mobile models (e.g., `Android (Pixel 7)`, `Apple iPhone`) and automatically adds unique 4-character identifiers to PC connections (e.g., `Windows PC (#A4B1)`) for group sharing.
+  - **Transmission Optimization**: Supports connection resume via `HTTP Range Requests` and On-the-fly ZIP streaming for folders, saving RAM and Disk space.
+  - **Inactivity Timeout**: Sessions remain alive indefinitely and only auto-terminate after 30 minutes of complete inactivity from all connected devices.
+  - **Smart Port Fallback**: Always prioritizes user-configured ports, gracefully falling back to a random port if occupied to prevent server hangs.
 - 🔒 **Secure 2-Step Upload**: Phone requests upload → PC approves/rejects → only then file data is transmitted. No file is saved without explicit approval.
 - 🎨 **Modern UI**: Sleek interface with Dark/Light Mode and 6 accent color themes (Jade, Mystic, Cinnabar, Purple, Tết, Zen).
 - 📁 **Smart File Handling**: Automatic file deduplication (adds `(1)`, `(2)` suffix instead of overwriting), folder ZIP streaming, HTTP Range request support for large downloads.
@@ -124,12 +125,13 @@ TichPhong Share là ứng dụng chia sẻ tệp mã nguồn mở siêu tốc, x
 
 - ⚡ **Tốc độ cao**: Truyền tệp qua mạng LAN, không giới hạn dung lượng. Wi-Fi 5/6 đạt 30–100+ MB/s.
 - 📱 **Tương thích cao**: Hỗ trợ giao thức **LocalSend** và **Google Quick Share**, chuyển tệp trực tiếp sang Android, Windows dễ dàng.
-- 📸 **QR Connect (TichPhong Direct)**: Quét mã QR trên PC để mở WebApp và chia sẻ file 2 chiều mà không cần cài đặt thêm ứng dụng.
-  - **Mô hình Data Hub**: Hỗ trợ nhiều thiết bị (điện thoại, laptop) kết nối vào 1 PC cùng lúc.
-  - **Nhận diện thiết bị thông minh**: Bóc tách chi tiết model điện thoại (VD: `Android (Pixel 7)`) và tự động gắn thêm mã `#ID` cho PC/Trình duyệt ẩn danh để phân biệt trong môi trường chia sẻ nhóm.
-  - **Quản lý phiên làm việc**: Phiên kết nối vô hạn thời gian, chỉ tự động hủy sau 30 phút khi không có bất kỳ tương tác nào từ tất cả các thiết bị.
-  - **Cấu hình mạng an toàn**: Ưu tiên cổng tùy chỉnh của người dùng, tự động fallback về cổng ngẫu nhiên nếu bị chiếm dụng.
-  - **Đa chế độ**: Hỗ trợ **LAN Mode** (chung mạng) và **Direct Mode** (PC tự phát Hotspot, không cần router).
+- 📸 **QR Connect (TichPhong Direct)**: WebApp Server Nhúng - Thiết bị nhận file **KHÔNG CẦN CÀI ĐẶT APP**.
+  - **Chế độ kết nối**: **LAN Mode** (dùng mạng hiện có) và **Direct Hotspot** (PC tự phát Wi-Fi bằng `nmcli` hoặc `netsh`, không cần Router).
+  - **Mô hình Data Hub**: Cho phép kết nối nhóm (nhiều điện thoại, laptop cùng lúc truy cập vào 1 phiên).
+  - **Nhận diện thiết bị thông minh**: Bóc tách mã máy chi tiết (VD: `Android (Pixel 7)`, `Apple iPhone`) và tự động gắn mã định danh 4 ký tự cho PC (VD: `Windows PC (#A4B1)`) để chống trùng lặp.
+  - **Tối ưu hóa Truyền tải**: Hỗ trợ tải lại (Resume) bằng `HTTP Range Requests`. Nén thư mục và tải xuống dạng luồng (On-the-fly ZIP streaming) giúp tiết kiệm dung lượng đĩa và RAM.
+  - **Quản lý Phiên (Inactivity Timeout)**: Phiên kết nối vô thời hạn, chỉ tự động hủy khi **không có bất kỳ thiết bị nào tương tác** trong vòng 30 phút.
+  - **Cấu hình mạng an toàn**: Luôn ưu tiên dùng Cổng tùy chỉnh (Custom Port). Nếu cổng bị chiếm dụng, tự động fallback về cổng ngẫu nhiên thay vì làm treo hệ thống.
 - 🔒 **Upload an toàn 2 bước**: Điện thoại yêu cầu gửi → PC duyệt/từ chối → file mới được truyền. Không file nào được lưu khi chưa được phê duyệt.
 - 🎨 **Giao diện hiện đại**: Dark/Light Mode với 6 bảng màu accent (Jade, Mystic, Cinnabar, Purple, Tết, Zen).
 - 📁 **Quản lý file thông minh**: Tự động thêm số thứ tự `(1)`, `(2)` khi trùng tên (không ghi đè), nén thư mục ZIP streaming, hỗ trợ HTTP Range request.
