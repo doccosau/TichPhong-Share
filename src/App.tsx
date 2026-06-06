@@ -32,6 +32,7 @@ type Device = {
   device_type: string;
   ip: string;
   port: number;
+  protocol: string;
 };
 
 type FileRequest = {
@@ -57,6 +58,9 @@ type ShareSettings = {
   auto_accept?: boolean;
   auto_start?: boolean;
   history?: {name: string, device: string, time: string, direction: string}[];
+  qs_enabled?: boolean;
+  qrc_enabled?: boolean;
+  qrc_port?: number;
 };
 
 // QUICK SHARE TYPES
@@ -621,7 +625,7 @@ function App() {
     // LocalSend flow
     setTransfer({ status: 'waiting', device: device.name, message: `Đang chờ ${device.name} phản hồi...`, files: selectedFiles });
     try {
-      const res = await invoke<string>("send_file", { ip: device.ip, filePaths: selectedFiles });
+      const res = await invoke<string>("send_file", { ip: device.ip, port: device.port, protocol: device.protocol, filePaths: selectedFiles });
       setTransfer({ status: 'success', device: device.name, message: res, files: selectedFiles });
       
       const newHistoryEntries = selectedFiles.map(f => ({
@@ -810,7 +814,7 @@ function App() {
           
           <AnimatePresence mode="wait">
             {activeTab === "send" && (
-              <motion.div key="send" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-8 max-w-4xl mx-auto">
+              <motion.div key="send" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col min-h-full gap-8 max-w-4xl mx-auto">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">{t("Gửi File", "Send File")}</h1>
                   <p className="text-gray-400">{t("Chọn file và thiết bị trong cùng mạng để gửi.", "Select files and devices on the same network to send.")}</p>
@@ -913,7 +917,7 @@ function App() {
             )}
 
             {activeTab === "receive" && (
-              <motion.div key="receive" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-8 max-w-4xl mx-auto">
+              <motion.div key="receive" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col min-h-full gap-8 max-w-4xl mx-auto">
                 <div className="flex flex-col gap-2">
                   <h1 className="text-3xl font-bold">{t("Nhận File", "Receive File")}</h1>
                   <p className="text-gray-400">{t("Đang lắng nghe yêu cầu gửi file. Máy tính của bạn đã được hiển thị trên mạng LAN.", "Listening for incoming files. Your PC is visible on the local network.")}</p>
@@ -1046,7 +1050,7 @@ function App() {
               </motion.div>
             )}
             {activeTab === "qrconnect" && (
-              <motion.div key="qrconnect" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-6 max-w-4xl mx-auto w-full">
+              <motion.div key="qrconnect" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col min-h-full gap-6 max-w-4xl mx-auto w-full">
                 <div>
                   <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
                     <Zap className="w-8 h-8 text-tichphong-blue" />
@@ -1355,7 +1359,7 @@ function App() {
             )}
 
             {activeTab === "portal" && (
-              <motion.div key="portal" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-8 max-w-4xl mx-auto w-full">
+              <motion.div key="portal" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col min-h-full gap-8 max-w-4xl mx-auto w-full">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">Device Portal</h1>
                   <p className="text-gray-400">{t("Biến máy tính thành ổ đĩa mạng và trạm chia sẻ nhanh qua QR Code.", "Turn your PC into a network drive and a quick QR share station.")}</p>
@@ -1447,7 +1451,7 @@ function App() {
             )}
 
             {activeTab === "settings" && (
-              <motion.div key="settings" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-8 max-w-4xl mx-auto w-full">
+              <motion.div key="settings" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col min-h-full gap-8 max-w-4xl mx-auto w-full">
                 <div className="flex items-center gap-4 border-b border-white/5 pb-6">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
                     <Settings className="w-7 h-7 text-blue-400" />
@@ -1719,13 +1723,94 @@ function App() {
                     </div>
                   </div>
 
+                  {/* Quick Share */}
+                  <div className="glass-card rounded-2xl p-6 relative overflow-hidden group border border-white/5 hover:border-cyan-500/30 transition-colors">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <Zap className="w-24 h-24" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-6 relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-white">{t("Cài đặt Quick Share", "Quick Share Settings")}</h2>
+                    </div>
+                    
+                    <div className="space-y-4 relative z-10">
+                      <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5">
+                        <div>
+                          <p className="text-sm font-medium text-white mb-1">{t("Kích hoạt Quick Share", "Enable Quick Share")}</p>
+                          <p className="text-xs text-gray-500">{t("Cho phép khám phá qua mDNS/BLE", "Allow discovery via mDNS/BLE")}</p>
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            const ns = {...settings, qs_enabled: !(settings.qs_enabled ?? true)};
+                            setSettings(ns);
+                            await invoke("update_settings", { newSettings: ns });
+                          }}
+                          className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${(settings.qs_enabled ?? true) ? 'bg-cyan-500' : 'bg-white/20'}`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${(settings.qs_enabled ?? true) ? 'translate-x-6.5' : 'translate-x-0.5'}`}></div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Connect */}
+                  <div className="glass-card rounded-2xl p-6 relative overflow-hidden group border border-white/5 hover:border-orange-500/30 transition-colors">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <QrCode className="w-24 h-24" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-6 relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                        <QrCode className="w-5 h-5" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-white">{t("Cài đặt QR Connect", "QR Connect Settings")}</h2>
+                    </div>
+                    
+                    <div className="space-y-4 relative z-10">
+                      <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 mb-4">
+                        <div>
+                          <p className="text-sm font-medium text-white mb-1">{t("Kích hoạt QR Connect", "Enable QR Connect")}</p>
+                          <p className="text-xs text-gray-500">{t("Cho phép truy cập Web App", "Allow Web App access")}</p>
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            const ns = {...settings, qrc_enabled: !(settings.qrc_enabled ?? true)};
+                            setSettings(ns);
+                            await invoke("update_settings", { newSettings: ns });
+                          }}
+                          className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${(settings.qrc_enabled ?? true) ? 'bg-orange-500' : 'bg-white/20'}`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${(settings.qrc_enabled ?? true) ? 'translate-x-6.5' : 'translate-x-0.5'}`}></div>
+                        </button>
+                      </div>
+
+                      <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                        <label className="block text-sm font-medium text-white mb-2">{t("Cổng tùy chỉnh (Port)", "Custom Port")}</label>
+                        <input 
+                          type="number" 
+                          value={settings.qrc_port || ""}
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            const port = val ? parseInt(val) : undefined;
+                            const ns = { ...settings, qrc_port: port };
+                            setSettings(ns);
+                            await invoke("update_settings", { newSettings: ns });
+                          }}
+                          className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                          placeholder={t("Mặc định (Ngẫu nhiên)", "Default (Random)")}
+                        />
+                        <p className="text-xs text-gray-500 mt-2">{t("Để trống để hệ thống tự cấp cổng động ngẫu nhiên.", "Leave blank for random dynamic port.")}</p>
+                      </div>
+                    </div>
+                  </div>
 
                 </div>
               </motion.div>
             )}
 
             {activeTab === "about" && (
-              <motion.div key="about" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full gap-8 max-w-4xl mx-auto w-full">
+              <motion.div key="about" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col min-h-full gap-8 max-w-4xl mx-auto w-full">
                 <div className="flex items-center gap-4 border-b border-white/5 pb-6">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 flex items-center justify-center border border-white/10">
                     <Info className="w-7 h-7 text-pink-400" />

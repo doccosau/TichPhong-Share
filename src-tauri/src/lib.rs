@@ -29,6 +29,7 @@ use directories::UserDirs;
 use futures_util::StreamExt;
 use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
+use sha2::{Sha256, Digest};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Write;
@@ -61,10 +62,117 @@ struct Device {
     device_type: String,
     ip: String,
     port: u16,
+    protocol: String,
+}
+
+fn get_config_dir() -> PathBuf {
+    UserDirs::new()
+        .map(|u| u.home_dir().join(".config").join("tichphong-share"))
+        .unwrap_or_else(|| PathBuf::from("/tmp/tichphong-share"))
+}
+
+/// Generate or load TLS certificate for HTTPS server.
+/// Returns (cert_pem, key_pem, fingerprint_hex)
+fn generate_or_load_tls_cert() -> (String, String, String) {
+    let config_dir = get_config_dir();
+    let _ = fs::create_dir_all(&config_dir);
+    let cert_path = config_dir.join("cert.pem");
+    let key_path = config_dir.join("key.pem");
+
+    // Try to load existing cert
+    if let (Ok(cert_pem), Ok(key_pem)) = (fs::read_to_string(&cert_path), fs::read_to_string(&key_path)) {
+        let fingerprint = compute_cert_fingerprint(&cert_pem);
+        return (cert_pem, key_pem, fingerprint);
+    }
+
+    // Generate new self-signed certificate
+    let cert = rcgen::generate_simple_self_signed(vec!["localsend".to_string()])
+        .expect("Failed to generate TLS certificate");
+
+    let cert_pem = cert.cert.pem();
+    let key_pem = cert.key_pair.serialize_pem();
+
+    // Save for reuse
+    let _ = fs::write(&cert_path, &cert_pem);
+    let _ = fs::write(&key_path, &key_pem);
+
+    let fingerprint = compute_cert_fingerprint(&cert_pem);
+    (cert_pem, key_pem, fingerprint)
+}
+
+/// Compute SHA-256 fingerprint of DER-encoded certificate (matches LocalSend spec)
+fn compute_cert_fingerprint(cert_pem: &str) -> String {
+    // Extract DER bytes from PEM
+    let pem_lines: Vec<&str> = cert_pem.lines()
+        .filter(|l| !l.starts_with("-----"))
+        .collect();
+    let b64 = pem_lines.join("");
+    if let Ok(der_bytes) = base64_decode(&b64) {
+        let hash = Sha256::digest(&der_bytes);
+        hash.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(":")
+    } else {
+        uuid::Uuid::new_v4().to_string() // fallback
+    }
+}
+
+fn base64_decode(input: &str) -> Result<Vec<u8>, String> {
+    // Simple base64 decoder (no extra dependency needed)
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = Vec::new();
+    let mut buf: u32 = 0;
+    let mut bits: u32 = 0;
+    for &b in input.as_bytes() {
+        if b == b'=' || b == b'\n' || b == b'\r' { continue; }
+        let val = TABLE.iter().position(|&c| c == b).ok_or("invalid base64")? as u32;
+        buf = (buf << 6) | val;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((buf >> bits) as u8);
+            buf &= (1 << bits) - 1;
+        }
+    }
+    Ok(out)
 }
 
 fn default_port() -> u16 {
     53317
+}
+
+fn generate_random_alias() -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    // Tiền tố — Tâm cảnh · Sơn thủy · Phật giáo
+    let prefixes = [
+        "Tịch", "Tĩnh", "Tịnh", "Thanh", "Trầm",
+        "An", "Định", "Không", "Giác", "Từ",
+        "Huệ", "Thiền", "Mộc", "Hoài", "Lam",
+        "Sương", "Yên", "Nguyên", "Minh", "Đạm",
+        "Vân", "Sơn", "Thủy", "Ngọc", "Hàn",
+    ];
+
+    // Hậu tố — Thiên nhiên · Sơn lâm · Cổ tự
+    let suffixes = [
+        "Sơn", "Tuyền", "Khê", "Hồ", "Nguyệt",
+        "Tùng", "Trúc", "Mai", "Liên", "Sen",
+        "Lâm", "Nham", "Thạch", "Phong", "Vân",
+        "Am", "Đường", "Hiên", "Trai", "Viện",
+        "Lan", "Cúc", "Hạc", "Lộ", "Ẩn",
+    ];
+
+    let mut hasher = DefaultHasher::new();
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos()
+        .hash(&mut hasher);
+    let hash = hasher.finish();
+
+    let prefix = prefixes[(hash % prefixes.len() as u64) as usize];
+    let suffix = suffixes[((hash / prefixes.len() as u64) % suffixes.len() as u64) as usize];
+
+    format!("{} {}", prefix, suffix)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -83,8 +191,8 @@ struct LocalSendDto {
     protocol: String,
     #[serde(default)]
     download: bool,
-    #[serde(default)]
-    announcement: Option<bool>,
+    #[serde(default, alias = "announcement")]
+    announce: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -150,6 +258,9 @@ pub struct ShareSettings {
     pub auto_accept: Option<bool>,
     #[serde(default)]
     pub history: Vec<TransferHistoryItem>,
+    pub qs_enabled: Option<bool>,
+    pub qrc_enabled: Option<bool>,
+    pub qrc_port: Option<u16>,
 }
 
 impl ShareSettings {
@@ -161,15 +272,20 @@ impl ShareSettings {
             })
             .unwrap_or_else(|| "/tmp/TichPhongShare".to_string());
 
+        let (_, _, cert_fingerprint) = generate_or_load_tls_cert();
+
         let default_settings = ShareSettings {
-            alias: "TichPhong OS".to_string(),
-            fingerprint: uuid::Uuid::new_v4().to_string(),
+            alias: generate_random_alias(),
+            fingerprint: cert_fingerprint,
             download_dir: default_dir,
             theme: "light".to_string(),
             accent: "jade".to_string(),
             language: "vi".to_string(),
             auto_accept: Some(false),
             history: vec![],
+            qs_enabled: Some(true),
+            qrc_enabled: Some(true),
+            qrc_port: None,
         };
 
         if let Some(config_dir) =
@@ -389,12 +505,17 @@ async fn reject_receive(
 #[tauri::command]
 async fn send_file(
     ip: String,
+    port: Option<u16>,
+    protocol: Option<String>,
     file_paths: Vec<String>,
     state: tauri::State<'_, Arc<ShareState>>,
 ) -> Result<String, String> {
-    let target_url = format!("https://{}:53317/api/localsend/v2/prepare-upload", ip);
+    let target_port = port.unwrap_or(53317);
+    let target_protocol = protocol.unwrap_or_else(|| "http".to_string());
+
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
+        .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -428,25 +549,41 @@ async fn send_file(
         file_info_list.push((file_id, file_path.clone(), file_size));
     }
 
+    let my_info = get_my_info_from_settings(&state);
     let prepare_req = serde_json::json!({
         "info": {
-            "alias": "TichPhong OS",
-            "version": "2.0",
-            "deviceModel": "Desktop",
-            "deviceType": "desktop",
-            "fingerprint": "tichphong-share-client",
-            "port": 53317,
-            "protocol": "http"
+            "alias": my_info.alias,
+            "version": my_info.version,
+            "deviceModel": my_info.deviceModel,
+            "deviceType": my_info.deviceType,
+            "fingerprint": my_info.fingerprint,
+            "port": my_info.port,
+            "protocol": my_info.protocol
         },
         "files": files_map
     });
 
-    let res = client
-        .post(&target_url)
-        .json(&prepare_req)
-        .send()
-        .await
-        .map_err(|e| format!("Không thể kết nối đến thiết bị: {}", e))?;
+    let base_url = format!("{}://{}:{}", target_protocol, ip, target_port);
+    let target_url = format!("{}/api/localsend/v2/prepare-upload", base_url);
+
+    // Try primary protocol, fallback to opposite for backward compatibility
+    let fallback_protocol = if target_protocol == "https" { "http" } else { "https" };
+    let fallback_base_url = format!("{}://{}:{}", fallback_protocol, ip, target_port);
+    let fallback_url = format!("{}/api/localsend/v2/prepare-upload", fallback_base_url);
+
+    let (res, base_url) = match client.post(&target_url).json(&prepare_req).send().await {
+        Ok(r) => (r, base_url),
+        Err(_) => {
+            // Primary failed, try opposite protocol (backward compat)
+            let r = client
+                .post(&fallback_url)
+                .json(&prepare_req)
+                .send()
+                .await
+                .map_err(|e| format!("Không thể kết nối đến thiết bị: {}", e))?;
+            (r, fallback_base_url)
+        }
+    };
 
     if !res.status().is_success() {
         if res.status() == 403 {
@@ -479,8 +616,8 @@ async fn send_file(
             let file_token = file_token_val.as_str().unwrap_or("");
 
             let upload_url = format!(
-                "https://{}:53317/api/localsend/v2/upload?sessionId={}&fileId={}&token={}",
-                ip, session_id, file_id, file_token
+                "{}/api/localsend/v2/upload?sessionId={}&fileId={}&token={}",
+                base_url, session_id, file_id, file_token
             );
 
             let file = tokio::fs::File::open(&file_path)
@@ -565,21 +702,25 @@ fn get_my_info(state: &ShareState) -> LocalSendDto {
     LocalSendDto {
         alias: settings.alias.clone(),
         version: "2.0".to_string(),
-        deviceModel: Some("TichPhong OS".to_string()),
+        deviceModel: Some("Desktop".to_string()),
         deviceType: "desktop".to_string(),
         fingerprint: settings.fingerprint.clone(),
         port: 53317,
-        protocol: "http".to_string(),
+        protocol: "https".to_string(),
         download: true,
-        announcement: Some(true),
+        announce: Some(true),
     }
+}
+
+fn get_my_info_from_settings(state: &ShareState) -> LocalSendDto {
+    get_my_info(state)
 }
 
 // --- LocalSend HTTP Handlers ---
 
 async fn info_handler(AxumState(state): AxumState<Arc<ShareState>>) -> Json<LocalSendDto> {
     let mut info = get_my_info(&state);
-    info.announcement = None; // Not needed in HTTP info
+    info.announce = None; // Not needed in HTTP info
     Json(info)
 }
 
@@ -596,12 +737,13 @@ async fn register_handler(
             name: info.alias.clone(),
             device_type: info.deviceType.clone(),
             ip: addr.ip().to_string(),
-            port: 53317,
+            port: info.port,
+            protocol: if info.protocol.is_empty() { "http".to_string() } else { info.protocol.clone() },
         },
     );
 
     let mut my_info = get_my_info(&state);
-    my_info.announcement = None;
+    my_info.announce = None;
     Json(my_info)
 }
 
@@ -802,13 +944,14 @@ async fn start_qr_connect(
         qrc::stop(existing).await;
     }
 
-    let (download_dir, alias, theme, accent) = {
+    let (download_dir, alias, theme, accent, port_preference) = {
         let s = state.settings.lock().unwrap();
         (
             s.download_dir.clone(),
             s.alias.clone(),
             s.theme.clone(),
             s.accent.clone(),
+            s.qrc_port,
         )
     };
     let (url, _token, qrc_state, wifi_qr) = qrc::start(
@@ -818,6 +961,7 @@ async fn start_qr_connect(
         alias,
         theme,
         accent,
+        port_preference,
     )
     .await?;
     *qrc_guard = Some(qrc_state);
@@ -888,7 +1032,7 @@ async fn qrc_update_theme(
 
 // --- Startup ---
 
-async fn start_http_server(state: Arc<ShareState>) {
+async fn start_https_server(state: Arc<ShareState>) {
     let app = Router::new()
         .route("/api/localsend/v2/info", get(info_handler))
         .route("/api/localsend/v1/info", get(info_handler))
@@ -903,13 +1047,35 @@ async fn start_http_server(state: Arc<ShareState>) {
         .layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 53317));
-    if let Ok(listener) = tokio::net::TcpListener::bind(addr).await {
-        println!("LocalSend HTTP API running on http://{}", addr);
-        let _ = axum::serve(
-            listener,
-            app.into_make_service_with_connect_info::<SocketAddr>(),
-        )
-        .await;
+
+    // Load TLS certificate
+    let (cert_pem, key_pem, _) = generate_or_load_tls_cert();
+
+    let tls_config = axum_server::tls_rustls::RustlsConfig::from_pem(
+        cert_pem.into_bytes(),
+        key_pem.into_bytes(),
+    )
+    .await;
+
+    match tls_config {
+        Ok(config) => {
+            println!("LocalSend HTTPS API running on https://{}", addr);
+            let _ = axum_server::bind_rustls(addr, config)
+                .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+                .await;
+        }
+        Err(e) => {
+            // Fallback to HTTP if TLS fails
+            eprintln!("TLS setup failed ({}), falling back to HTTP", e);
+            if let Ok(listener) = tokio::net::TcpListener::bind(addr).await {
+                println!("LocalSend HTTP API running on http://{}", addr);
+                let _ = axum::serve(
+                    listener,
+                    app.into_make_service_with_connect_info::<SocketAddr>(),
+                )
+                .await;
+            }
+        }
     }
 }
 
@@ -967,14 +1133,15 @@ fn start_udp_discovery(state: Arc<ShareState>) {
                             name: info.alias.clone(),
                             device_type: info.deviceType.clone(),
                             ip: src.ip().to_string(),
-                            port: 53317,
+                            port: info.port,
+                            protocol: if info.protocol.is_empty() { "http".to_string() } else { info.protocol.clone() },
                         };
 
                         let _ = state.app_handle.emit("device-found", device);
 
-                        if info.announcement.unwrap_or(false) {
+                        if info.announce.unwrap_or(false) {
                             let mut reply_msg = get_my_info(&state);
-                            reply_msg.announcement = Some(false);
+                            reply_msg.announce = Some(false);
                             if let Ok(reply_bytes) = serde_json::to_string(&reply_msg) {
                                 let _ = socket.send_to(reply_bytes.as_bytes(), src).await;
                             }
@@ -1146,6 +1313,7 @@ pub fn run() {
                                     .unwrap_or_else(|| "0".to_string())
                                     .parse()
                                     .unwrap_or(0),
+                                protocol: "quickshare".to_string(),
                             };
                             let _ = app_handle_clone2.emit("device-found", device);
                         }
@@ -1168,7 +1336,7 @@ pub fn run() {
 
             let state_clone_2 = share_state.clone();
             tauri::async_runtime::spawn(async move {
-                start_http_server(state_clone_2).await;
+                start_https_server(state_clone_2).await;
             });
 
             start_udp_discovery(share_state.clone());

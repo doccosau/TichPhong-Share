@@ -15,7 +15,12 @@ TichPhong Share is an ultra-fast, open-source file sharing application built wit
 
 - ⚡ **High Speed**: Transfer files over LAN with no file size limits. Wi-Fi 5/6 can reach 30–100+ MB/s.
 - 📱 **High Compatibility**: Supports **LocalSend** and **Google Quick Share** protocols, making it easy to transfer files directly to Android, Windows, and other devices.
-- 📸 **QR Connect (TichPhong Direct)**: Scan QR code on PC → phone browser opens → share files bidirectionally without installing any app. Supports **LAN Mode** (same network) and **Direct Mode** (PC creates Hotspot, no router needed). *(Coming Soon in v2.0.0)*
+- 📸 **QR Connect (TichPhong Direct)**: Scan QR on PC to share files bidirectionally via WebApp—no app installation needed. 
+  - **Data Hub Model**: Supports multiple devices (phones, laptops) connecting to a single PC simultaneously.
+  - **Smart Device ID**: Detects specific mobile models (e.g., `Android (Pixel 7)`) and automatically adds a unique `#ID` to PC names for group sharing.
+  - **Inactivity Timeout**: Sessions auto-terminate only after 30 minutes of complete inactivity from all connected devices.
+  - **Smart Port Fallback**: Prioritizes user-configured ports, gracefully falling back to a random port if occupied.
+  - **Network Options**: Supports **LAN Mode** (same network) and **Direct Mode** (PC creates Hotspot, no router needed).
 - 🔒 **Secure 2-Step Upload**: Phone requests upload → PC approves/rejects → only then file data is transmitted. No file is saved without explicit approval.
 - 🎨 **Modern UI**: Sleek interface with Dark/Light Mode and 6 accent color themes (Jade, Mystic, Cinnabar, Purple, Tết, Zen).
 - 📁 **Smart File Handling**: Automatic file deduplication (adds `(1)`, `(2)` suffix instead of overwriting), folder ZIP streaming, HTTP Range request support for large downloads.
@@ -119,7 +124,12 @@ TichPhong Share là ứng dụng chia sẻ tệp mã nguồn mở siêu tốc, x
 
 - ⚡ **Tốc độ cao**: Truyền tệp qua mạng LAN, không giới hạn dung lượng. Wi-Fi 5/6 đạt 30–100+ MB/s.
 - 📱 **Tương thích cao**: Hỗ trợ giao thức **LocalSend** và **Google Quick Share**, chuyển tệp trực tiếp sang Android, Windows dễ dàng.
-- 📸 **QR Connect (TichPhong Direct)**: Quét mã QR trên PC → trình duyệt điện thoại mở → chia sẻ file 2 chiều, không cần cài app. Hỗ trợ **LAN Mode** (chung mạng) và **Direct Mode** (PC phát Hotspot, không cần router). *(Sắp ra mắt trong v2.0.0)*
+- 📸 **QR Connect (TichPhong Direct)**: Quét mã QR trên PC để mở WebApp và chia sẻ file 2 chiều mà không cần cài đặt thêm ứng dụng.
+  - **Mô hình Data Hub**: Hỗ trợ nhiều thiết bị (điện thoại, laptop) kết nối vào 1 PC cùng lúc.
+  - **Nhận diện thiết bị thông minh**: Bóc tách chi tiết model điện thoại (VD: `Android (Pixel 7)`) và tự động gắn thêm mã `#ID` cho PC/Trình duyệt ẩn danh để phân biệt trong môi trường chia sẻ nhóm.
+  - **Quản lý phiên làm việc**: Phiên kết nối vô hạn thời gian, chỉ tự động hủy sau 30 phút khi không có bất kỳ tương tác nào từ tất cả các thiết bị.
+  - **Cấu hình mạng an toàn**: Ưu tiên cổng tùy chỉnh của người dùng, tự động fallback về cổng ngẫu nhiên nếu bị chiếm dụng.
+  - **Đa chế độ**: Hỗ trợ **LAN Mode** (chung mạng) và **Direct Mode** (PC tự phát Hotspot, không cần router).
 - 🔒 **Upload an toàn 2 bước**: Điện thoại yêu cầu gửi → PC duyệt/từ chối → file mới được truyền. Không file nào được lưu khi chưa được phê duyệt.
 - 🎨 **Giao diện hiện đại**: Dark/Light Mode với 6 bảng màu accent (Jade, Mystic, Cinnabar, Purple, Tết, Zen).
 - 📁 **Quản lý file thông minh**: Tự động thêm số thứ tự `(1)`, `(2)` khi trùng tên (không ghi đè), nén thư mục ZIP streaming, hỗ trợ HTTP Range request.

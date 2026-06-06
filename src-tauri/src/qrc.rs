@@ -121,7 +121,7 @@ pub struct QrcSession {
     pub shared_files: Vec<QrcSharedFile>,
     pub pending_uploads: HashMap<String, QrcPendingUpload>,
     pub connected_devices: HashMap<String, String>,
-    pub created_at: std::time::Instant,
+    pub last_activity: std::sync::Mutex<std::time::Instant>,
 }
 
 impl QrcSession {
@@ -131,12 +131,23 @@ impl QrcSession {
             shared_files: Vec::new(),
             pending_uploads: HashMap::new(),
             connected_devices: HashMap::new(),
-            created_at: std::time::Instant::now(),
+            last_activity: std::sync::Mutex::new(std::time::Instant::now()),
+        }
+    }
+
+    fn touch(&self) {
+        if let Ok(mut last) = self.last_activity.lock() {
+            *last = std::time::Instant::now();
         }
     }
 
     fn is_expired(&self) -> bool {
-        self.created_at.elapsed().as_secs() > SESSION_TIMEOUT_SECS
+        if let Ok(last) = self.last_activity.lock() {
+            if last.elapsed().as_secs() > SESSION_TIMEOUT_SECS {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -171,6 +182,7 @@ async fn session_handler(
     let session = state.session.read().await;
     if let Some(ref sess) = *session {
         if sess.token == token && !sess.is_expired() {
+            sess.touch();
             // Inject the token and server info into the HTML
             let ip = local_ip_address::local_ip()
                 .map(|ip| ip.to_string())
@@ -204,7 +216,9 @@ async fn websocket_handler(
     {
         let session = state.session.read().await;
         match &*session {
-            Some(sess) if sess.token == token && !sess.is_expired() => {}
+            Some(sess) if sess.token == token && !sess.is_expired() => {
+                sess.touch();
+            }
             _ => return (StatusCode::FORBIDDEN, "Invalid token").into_response(),
         }
     }
@@ -259,9 +273,10 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
                         match msg {
                             WsClientMessage::DeviceInfo { user_agent } => {
                                 let mut device_name = user_agent
-                                    .unwrap_or_else(|| "Mobile Browser".to_string());
+                                    .unwrap_or_else(|| "Web Browser".to_string());
 
                                 // Simple User-Agent parser for nicer display
+                                let mut needs_id = false;
                                 if device_name.contains("iPhone") {
                                     device_name = "Apple iPhone".to_string();
                                 } else if device_name.contains("iPad") {
@@ -282,6 +297,23 @@ async fn handle_websocket(socket: WebSocket, state: Arc<QrcState>) {
                                     } else {
                                         device_name = "Android Device".to_string();
                                     }
+                                } else if device_name.contains("Windows") {
+                                    device_name = "Windows PC".to_string();
+                                    needs_id = true;
+                                } else if device_name.contains("Macintosh") || device_name.contains("Mac OS") {
+                                    device_name = "Apple Mac".to_string();
+                                    needs_id = true;
+                                } else if device_name.contains("Linux") {
+                                    device_name = "Linux PC".to_string();
+                                    needs_id = true;
+                                } else {
+                                    device_name = "Web Browser".to_string();
+                                    needs_id = true;
+                                }
+
+                                // Append a short unique ID only for PCs/Browsers to distinguish them
+                                if needs_id {
+                                    device_name = format!("{} (#{})", device_name, &client_id_clone[..4].to_uppercase());
                                 }
 
                                 let mut current_devices = Vec::new();
@@ -393,6 +425,7 @@ async fn list_files_handler(
     let session = state.session.read().await;
     match &*session {
         Some(sess) if sess.token == token && !sess.is_expired() => {
+            sess.touch();
             let files: Vec<QrcFileInfo> = sess
                 .shared_files
                 .iter()
@@ -420,6 +453,7 @@ async fn download_handler(
     let session = state.session.read().await;
     let file = match &*session {
         Some(sess) if sess.token == token && !sess.is_expired() => {
+            sess.touch();
             sess.shared_files.iter().find(|f| f.id == file_id).cloned()
         }
         _ => return (StatusCode::FORBIDDEN, "Invalid session").into_response(),
@@ -444,7 +478,8 @@ async fn download_handler(
                     let mut zip = async_zip::base::write::ZipFileWriter::with_tokio(&mut tx);
 
                     let mut dirs = vec![std::path::PathBuf::from(&path_clone)];
-                    let base_path = std::path::PathBuf::from(&path_clone);
+                    let root_path = std::path::PathBuf::from(&path_clone);
+                    let base_path = root_path.parent().unwrap_or(&root_path).to_path_buf();
 
                     while let Some(dir) = dirs.pop() {
                         if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
@@ -569,7 +604,10 @@ async fn download_all_handler(
 
     let session = state.session.read().await;
     let files = match &*session {
-        Some(sess) if sess.token == token && !sess.is_expired() => sess.shared_files.clone(),
+        Some(sess) if sess.token == token && !sess.is_expired() => {
+            sess.touch();
+            sess.shared_files.clone()
+        }
         _ => return (StatusCode::FORBIDDEN, "Invalid session").into_response(),
     };
     drop(session);
@@ -727,26 +765,45 @@ async fn upload_handler(
 
         let mut actual_size = 0u64;
         let mut last_emit = std::time::Instant::now();
+        let mut upload_success = true;
 
-        while let Ok(Some(chunk)) = field.chunk().await {
-            if tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
-                .await
-                .is_err()
-            {
-                break;
-            }
-            actual_size += chunk.len() as u64;
+        loop {
+            match field.chunk().await {
+                Ok(Some(chunk)) => {
+                    if tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
+                        .await
+                        .is_err()
+                    {
+                        upload_success = false;
+                        break;
+                    }
+                    actual_size += chunk.len() as u64;
 
-            if last_emit.elapsed().as_millis() > 100 {
-                let _ = state.app_handle.emit(
-                    "qrc-upload-progress",
-                    serde_json::json!({
-                        "id": upload_id,
-                        "loaded": actual_size,
-                    }),
-                );
-                last_emit = std::time::Instant::now();
+                    if last_emit.elapsed().as_millis() > 100 {
+                        let _ = state.app_handle.emit(
+                            "qrc-upload-progress",
+                            serde_json::json!({
+                                "id": upload_id,
+                                "loaded": actual_size,
+                            }),
+                        );
+                        last_emit = std::time::Instant::now();
+                    }
+                }
+                Ok(None) => break, // Finished reading
+                Err(_) => {
+                    upload_success = false;
+                    break;
+                }
             }
+        }
+
+        // Must drop the file before removing it
+        drop(file);
+
+        if !upload_success {
+            let _ = tokio::fs::remove_file(&target_path).await;
+            continue;
         }
 
         // Notify PC that the actual transfer is complete
@@ -801,16 +858,23 @@ pub async fn start(
     alias: String,
     theme: String,
     accent: String,
+    port_preference: Option<u16>,
 ) -> Result<(String, String, Arc<QrcState>, Option<String>), String> {
     let token = uuid::Uuid::new_v4().to_string().replace("-", "")[..12].to_string();
     let (event_tx, _) = broadcast::channel(100);
 
     let session = QrcSession::new(token.clone());
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 0));
-    let listener = tokio::net::TcpListener::bind(addr)
-        .await
-        .map_err(|e| format!("Cannot bind port: {}", e))?;
+    let addr = SocketAddr::from(([0, 0, 0, 0], port_preference.unwrap_or(0)));
+    let listener = match tokio::net::TcpListener::bind(addr).await {
+        Ok(l) => l,
+        Err(_) => {
+            // Fallback to random port if preferred port is already in use
+            tokio::net::TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], 0)))
+                .await
+                .map_err(|e| format!("Cannot bind port: {}", e))?
+        }
+    };
     let port = listener.local_addr().unwrap().port();
 
     let state = Arc::new(QrcState {
@@ -856,34 +920,70 @@ pub async fn start(
     let mut wifi_qr = None;
 
     if mode == "direct" {
-        ip = "10.42.0.1".to_string();
-
         let id = uuid::Uuid::new_v4().to_string()[..4].to_uppercase();
         let ssid = format!("TichPhong Share {}", id);
         let pass = uuid::Uuid::new_v4().to_string()[..8].to_string();
         let con_name = "TichPhong-Share-Direct";
 
-        // Clean up any existing connection with this name
-        let _ = std::process::Command::new("nmcli")
-            .args(&["connection", "delete", con_name])
-            .output();
+        let mut hotspot_success = false;
 
-        // Create new hotspot profile
-        let _ = std::process::Command::new("nmcli")
-            .args(&["connection", "add", "type", "wifi", "ifname", "*", "con-name", con_name, "autoconnect", "false", "ssid", &ssid])
-            .output();
+        #[cfg(target_os = "linux")]
+        {
+            // Clean up any existing connection with this name
+            let _ = std::process::Command::new("nmcli")
+                .args(&["connection", "delete", con_name])
+                .output();
 
-        // Configure as AP with WPA2
-        let _ = std::process::Command::new("nmcli")
-            .args(&["connection", "modify", con_name, "802-11-wireless.mode", "ap", "802-11-wireless.band", "bg", "ipv4.method", "shared", "802-11-wireless-security.key-mgmt", "wpa-psk", "802-11-wireless-security.psk", &pass])
-            .output();
+            // Create new hotspot profile
+            let _ = std::process::Command::new("nmcli")
+                .args(&["connection", "add", "type", "wifi", "ifname", "*", "con-name", con_name, "autoconnect", "false", "ssid", &ssid])
+                .output();
 
-        // Activate it
-        let _ = std::process::Command::new("nmcli")
-            .args(&["connection", "up", con_name])
-            .output();
+            // Configure as AP with WPA2
+            let _ = std::process::Command::new("nmcli")
+                .args(&["connection", "modify", con_name, "802-11-wireless.mode", "ap", "802-11-wireless.band", "bg", "ipv4.method", "shared", "802-11-wireless-security.key-mgmt", "wpa-psk", "802-11-wireless-security.psk", &pass])
+                .output();
 
-        wifi_qr = Some(format!("WIFI:T:WPA;S:{};P:{};;", ssid, pass));
+            // Activate it
+            if let Ok(output) = std::process::Command::new("nmcli")
+                .args(&["connection", "up", con_name])
+                .output()
+            {
+                if output.status.success() {
+                    hotspot_success = true;
+                }
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            let _ = std::process::Command::new("netsh")
+                .args(&["wlan", "set", "hostednetwork", "mode=allow", &format!("ssid={}", ssid), &format!("key={}", pass)])
+                .output();
+            if let Ok(output) = std::process::Command::new("netsh")
+                .args(&["wlan", "start", "hostednetwork"])
+                .output()
+            {
+                if output.status.success() {
+                    hotspot_success = true;
+                }
+            }
+        }
+
+        if hotspot_success {
+            #[cfg(target_os = "linux")]
+            {
+                ip = "10.42.0.1".to_string();
+            }
+            #[cfg(target_os = "windows")]
+            {
+                // Windows hosted network IP is usually 192.168.137.1
+                ip = "192.168.137.1".to_string();
+            }
+            wifi_qr = Some(format!("WIFI:T:WPA;S:{};P:{};;", ssid, pass));
+        } else {
+            println!("Failed to start direct hotspot, falling back to LAN IP");
+        }
     }
 
     let url = format!("http://{}:{}/s/{}", ip, port, token);
@@ -909,14 +1009,23 @@ pub async fn stop(state: &QrcState) {
     }
 
     // Stop Hotspot if active
-    let _ = std::process::Command::new("nmcli")
-        .args(&["connection", "down", "TichPhong-Share-Direct"])
-        .output();
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("nmcli")
+            .args(&["connection", "down", "TichPhong-Share-Direct"])
+            .output();
 
-    // Clean up Hotspot profile
-    let _ = std::process::Command::new("nmcli")
-        .args(&["connection", "delete", "TichPhong-Share-Direct"])
-        .output();
+        let _ = std::process::Command::new("nmcli")
+            .args(&["connection", "delete", "TichPhong-Share-Direct"])
+            .output();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("netsh")
+            .args(&["wlan", "stop", "hostednetwork"])
+            .output();
+    }
 
     // Clear session
     *state.session.write().await = None;

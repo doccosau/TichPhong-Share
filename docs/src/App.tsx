@@ -27,9 +27,9 @@ export default function App() {
     { q: "TichPhong Share có miễn phí không?", a: "Hoàn toàn miễn phí. Phần mềm được phát triển dưới dạng mã nguồn mở và sẽ luôn miễn phí, không có quảng cáo." },
     { q: "Tôi có cần kết nối Internet để gửi file?", a: "Không cần. TichPhong Share truyền dữ liệu qua mạng cục bộ (LAN hoặc Wi-Fi). Với chế độ Direct Mode, PC phát Hotspot riêng để điện thoại kết nối trực tiếp — hoạt động ở bất kỳ đâu, không cần router." },
     { q: "Tốc độ truyền tải tối đa là bao nhiêu?", a: "Tốc độ phụ thuộc vào router Wi-Fi hoặc cáp mạng LAN của bạn. Với Wi-Fi 5/6, tốc độ có thể đạt từ 30MB/s đến hơn 100MB/s, nhanh hơn rất nhiều so với Bluetooth." },
-    { q: "QR Connect là gì?", a: "QR Connect cho phép quét mã QR trên PC bằng điện thoại để mở giao diện web chia sẻ file 2 chiều — không cần cài app. Hỗ trợ 2 chế độ: LAN Mode (chung mạng) và Direct Mode (PC phát Hotspot)." },
+    { q: "QR Connect là gì?", a: "QR Connect cho phép quét mã QR trên PC để mở giao diện web chia sẻ file 2 chiều — không cần cài app. Tính năng hỗ trợ nhiều thiết bị kết nối cùng lúc, tự nhận diện thiết bị thông minh (gắn mã #ID cho PC), và tự hủy phiên an toàn sau 30 phút không hoạt động." },
     { q: "TichPhong Share sử dụng công nghệ gì?", a: "Ứng dụng xây dựng trên Tauri v2 (Rust + React), sử dụng giao thức TichPhong Direct (WebSocket + HTTP) cho QR Connect, đồng thời tương thích Quick Share (rqs - GPLv3) và LocalSend (Apache 2.0)." },
-    { q: "Phiên bản 2.0 khi nào ra mắt?", a: "Phiên bản 2.0 (với tính năng QR Connect, Direct Mode, upload 2 bước, nhận diện thiết bị) đang trong giai đoạn hoàn thiện cuối cùng và sẽ sớm được phát hành trên GitHub (Coming Soon)." }
+    { q: "Phiên bản 2.0 khi nào ra mắt?", a: "Phiên bản 2.0 (với QR Connect, Direct Mode, upload 2 bước an toàn, nhận diện tên thiết bị chi tiết và quản lý phiên tự động) đang trong giai đoạn hoàn thiện cuối cùng và sẽ sớm được phát hành trên GitHub (Coming Soon)." }
   ];
 
   return (
@@ -183,9 +183,9 @@ export default function App() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: QrCode, title: 'QR Connect (V2.0)', desc: 'Sắp ra mắt: Quét mã QR trên PC bằng điện thoại → trình duyệt mở giao diện web → chia sẻ file 2 chiều không cần cài app. Hỗ trợ LAN Mode và Direct Mode (PC phát Hotspot).' },
+              { icon: QrCode, title: 'QR Connect (V2.0)', desc: 'Quét mã QR trên PC để mở WebApp và chia sẻ 2 chiều mà không cần cài app. Hỗ trợ nhiều thiết bị cùng lúc (Data Hub), tự động nhận diện tên máy, và quản lý phiên làm việc thông minh (Inactivity Timeout).' },
               { icon: Zap, title: 'Tốc Độ Ánh Sáng', desc: 'Khai thác tối đa băng thông mạng LAN. Chuyển tệp tin hàng Gigabyte chỉ trong vài giây, nhanh hơn chục lần so với Bluetooth.' },
-              { icon: MonitorSmartphone, title: 'Tương Thích Đa Nền Tảng', desc: 'Kết nối Android, Windows qua Quick Share (Nearby Connections) & LocalSend. Kết nối mọi thiết bị khác qua QR Connect trên trình duyệt.' },
+              { icon: MonitorSmartphone, title: 'Tương Thích Đa Nền Tảng', desc: 'Kết nối Android, Windows qua Quick Share & LocalSend. Kết nối mọi thiết bị khác qua QR Connect. Tự động gắn mã #ID cho các PC để tránh nhầm lẫn khi làm việc nhóm.' },
               { icon: Shield, title: 'Upload An Toàn 2 Bước', desc: 'Điện thoại gửi yêu cầu → PC duyệt hoặc từ chối → file mới được truyền. Không file nào được lưu khi chưa được phê duyệt rõ ràng.' },
               { icon: WifiOff, title: 'Direct Mode — Không Cần Router', desc: 'PC tự phát Wi-Fi Hotspot riêng. Điện thoại quét QR để kết nối trực tiếp — hoạt động ở bất kỳ đâu, ngay cả nơi không có Internet.' },
               { icon: Rocket, title: 'Siêu Nhẹ — Dưới 50MB RAM', desc: 'Xây dựng trên Rust và Tauri v2, tối ưu cực độ. WebApp di động hỗ trợ song ngữ Việt-Anh, giữ sáng màn hình khi truyền file, có haptic feedback.' }
