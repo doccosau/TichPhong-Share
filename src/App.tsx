@@ -1857,7 +1857,7 @@ function App() {
                       <img src="/app-icon.png" alt="App Icon" className="w-12 h-12" />
                     </div>
                     <h2 className="text-3xl font-bold mb-2">TichPhong Share</h2>
-                    <p className="text-tichphong-blue font-medium mb-6">Version 2.0.0 (Standalone)</p>
+                    <p className="text-tichphong-blue font-medium mb-6">Version 2.0.1 (Standalone)</p>
                     <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-2xl mx-auto">
                       {t("Ứng dụng chia sẻ file siêu tốc, hỗ trợ đa nền tảng và tích hợp sâu với hệ sinh thái TichPhong OS. Chia sẻ qua LocalSend, Quick Share, WebDAV và QR Connect (TichPhong Direct).", "High-speed file sharing app, cross-platform support and deeply integrated with TichPhong OS ecosystem. Share via LocalSend, Quick Share, WebDAV and QR Connect (TichPhong Direct).")}
                     </p>
@@ -2034,7 +2034,7 @@ function App() {
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-[color:var(--color-white)]">{t("Sổ tay Hướng dẫn TichPhong Share", "TichPhong Share User Guide")}</h2>
-                        <p className="text-sm text-[color:var(--color-gray-400)]">{t("Cách sử dụng mọi tính năng", "How to use all features")} (Version 2.0.0)</p>
+                        <p className="text-sm text-[color:var(--color-gray-400)]">{t("Cách sử dụng mọi tính năng", "How to use all features")} (Version 2.0.1)</p>
                       </div>
                     </div>
                     <button type="button" onClick={() => setShowGuide(false)} className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer">
@@ -2136,8 +2136,20 @@ function App() {
                   
                   <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-6 text-sm text-white">
                     <div className="relative pl-6 border-l-2 border-emerald-500/30 space-y-8">
-                      {/* v2.0.0 */}
+                      {/* v2.0.1 */}
                       <div className="relative">
+                        <span className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-tichphong-surface"></span>
+                        <h3 className="text-emerald-400 font-bold text-lg mb-1">v2.0.1 - Smart Updates</h3>
+                        <p className="text-xs text-gray-500 mb-3">07/06/2026</p>
+                        <ul className="list-disc pl-5 space-y-2 text-gray-300">
+                          <li><span className="text-white font-medium">Smart Updates:</span> {t("Tự động kiểm tra bản cập nhật mới và nhận diện nền tảng tải xuống.", "Smart update checker with auto platform detection.")}</li>
+                          <li><span className="text-white font-medium">QR Connect:</span> {t("Thêm liên kết hiển thị trực tiếp để dễ dàng copy.", "Added direct link display for easy copying.")}</li>
+                          <li><span className="text-white font-medium">Fixes:</span> {t("Tối ưu hóa LocalSend và tăng độ ổn định ứng dụng.", "Optimized LocalSend and improved application stability.")}</li>
+                        </ul>
+                      </div>
+                      
+                      {/* v2.0.0 */}
+                      <div className="relative opacity-80">
                         <span className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-tichphong-surface"></span>
                         <h3 className="text-emerald-400 font-bold text-lg mb-1">v2.0.0 - TichPhong Share Pro</h3>
                         <p className="text-xs text-gray-500 mb-3">05/06/2026</p>
