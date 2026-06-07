@@ -24,6 +24,8 @@
       "csp": null
     }
   },
+  "plugins": {
+  },
   "bundle": {
     "active": true,
     "windows": {

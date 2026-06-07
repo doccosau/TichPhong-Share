@@ -196,9 +196,10 @@ function App() {
   const [showGuide, setShowGuide] = useState(false);
   const [showDonate, setShowDonate] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
-  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error'>('idle');
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error' | 'downloading' | 'installing' | 'done'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
-  const [releaseUrl, setReleaseUrl] = useState('');
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateData, setUpdateData] = useState<{version: string, url: string, assets: {name: string, browser_download_url: string}[]} | null>(null);
 
   // Toast Notification State
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -219,29 +220,49 @@ function App() {
   const [qrcActiveUploads, setQrcActiveUploads] = useState<{id: string, name: string, loaded: number, total: number}[]>([]);
   const [qrcReceivedFiles, setQrcReceivedFiles] = useState<{name: string, time: string}[]>([]);
 
-  const handleCheckUpdate = async () => {
-    setUpdateStatus('checking');
+  const handleCheckUpdate = async (silent = false) => {
+    if (!silent) setUpdateStatus('checking');
     try {
+      const response = await fetch('https://api.github.com/repos/doccosau/TichPhong-Share/releases/latest');
+      if (!response.ok) throw new Error("Failed to fetch release");
+      const data = await response.json();
+      const latestVer = data.tag_name.replace('v', '');
+      
       const { getVersion } = await import('@tauri-apps/api/app');
-      const currentVersion = await getVersion();
-      const res = await fetch("https://api.github.com/repos/doccosau/TichPhong-Share/releases/latest");
-      if (!res.ok) throw new Error("Failed to fetch update");
-      const data = await res.json();
-      const latest = data.tag_name.replace('v', '');
-      if (latest !== currentVersion && data.html_url) {
-        setLatestVersion(latest);
-        setReleaseUrl(data.html_url);
+      const currentVerReal = await getVersion();
+      
+      if (latestVer.localeCompare(currentVerReal, undefined, { numeric: true, sensitivity: 'base' }) > 0) {
+        setLatestVersion(latestVer);
         setUpdateStatus('available');
+        setUpdateData({
+          version: latestVer,
+          url: data.html_url,
+          assets: data.assets || []
+        });
+        
+        if (silent) {
+          setShowUpdateModal(true);
+          triggerOSNotification(
+            t("Cập nhật TichPhong Share", "TichPhong Share Update"),
+            t(`Có bản cập nhật mới ${latestVer}. Mở ứng dụng để tải xuống.`, `New update ${latestVer} is available. Open app to download.`)
+          );
+        }
       } else {
-        setUpdateStatus('latest');
-        setTimeout(() => setUpdateStatus('idle'), 3000);
+        if (!silent) {
+          setUpdateStatus('latest');
+          setTimeout(() => setUpdateStatus('idle'), 3000);
+        }
       }
     } catch (e) {
       console.error("Update check failed:", e);
-      setUpdateStatus('error');
-      setTimeout(() => setUpdateStatus('idle'), 3000);
+      if (!silent) {
+        setUpdateStatus('error');
+        setTimeout(() => setUpdateStatus('idle'), 3000);
+      }
     }
   };
+
+
 
   const t = (vi: string, en: string) => settings.language === 'en' ? en : vi;
 
@@ -306,6 +327,11 @@ function App() {
       }
     }
     fetchInfo();
+    
+    // Check for updates silently on startup after a short delay
+    setTimeout(() => {
+      handleCheckUpdate(true);
+    }, 5000);
     
     invoke<string[]>("get_cli_args").then(args => {
       if (args && args.length > 0) {
@@ -1858,8 +1884,8 @@ function App() {
                     {updateStatus === 'available' && (
                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 bg-tichphong-blue/10 border border-tichphong-blue/30 rounded-xl p-5 w-full max-w-md flex flex-col items-center">
                         <p className="font-bold text-white mb-2">{t("Đã có phiên bản mới: ", "New version available: ")} v{latestVersion}</p>
-                        <p className="text-xs text-gray-400 mb-4">{t("Truy cập GitHub để tải bản cài đặt tương thích với thiết bị của bạn.", "Go to GitHub to download the compatible installer for your device.")}</p>
-                        <button onClick={() => openUrl(releaseUrl)} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 w-full flex items-center justify-center gap-2 cursor-pointer">
+                        <p className="text-xs text-gray-400 mb-4">{t("Mở hộp thoại cập nhật để tải về phiên bản tương thích với máy của bạn.", "Open the update dialog to download the compatible installer for your device.")}</p>
+                        <button onClick={() => setShowUpdateModal(true)} className="bg-tichphong-blue hover:bg-tichphong-blue-hover text-[#ffffff] px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-tichphong-blue/20 w-full flex items-center justify-center gap-2 cursor-pointer">
                           <Download className="w-4 h-4" /> {t("Tải về ngay", "Download Now")}
                         </button>
                       </motion.div>
@@ -2287,6 +2313,66 @@ function App() {
                   </div>
                 )}
               </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Update Modal */}
+          <AnimatePresence>
+            {showUpdateModal && updateData && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4"
+              >
+                <motion.div 
+                  initial={{ scale: 0.95, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.95, y: 20 }}
+                  className="glass-card border border-tichphong-blue/30 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col bg-tichphong-surface"
+                >
+                  <div className="p-6 text-center">
+                    <div className="w-16 h-16 bg-tichphong-blue/20 rounded-full flex items-center justify-center text-tichphong-blue mx-auto mb-4">
+                      <Download className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">{t("Có bản cập nhật mới!", "New Update Available!")}</h2>
+                    <p className="text-gray-400 mb-6">
+                      {t("Phiên bản", "Version")} <strong className="text-white">v{updateData.version}</strong> {t("đã sẵn sàng để tải xuống.", "is ready to download.")}
+                    </p>
+                    
+                    <div className="space-y-3 mb-6">
+                      {navigator.userAgent.toLowerCase().includes('win') ? (
+                        updateData.assets.filter(a => a.name.endsWith('.exe') || a.name.endsWith('.msi')).slice(0, 1).map(asset => (
+                          <button key={asset.name} onClick={() => openUrl(asset.browser_download_url)} className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer">
+                            <Monitor className="w-5 h-5" /> Tải về cho Windows
+                          </button>
+                        ))
+                      ) : (
+                        <>
+                          {updateData.assets.filter(a => a.name.endsWith('.deb')).map(asset => (
+                            <button key={asset.name} onClick={() => openUrl(asset.browser_download_url)} className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-medium transition-colors shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 cursor-pointer">
+                              <Laptop className="w-5 h-5" /> Tải về cho Debian/Ubuntu (.deb)
+                            </button>
+                          ))}
+                          {updateData.assets.filter(a => a.name.endsWith('.rpm')).map(asset => (
+                            <button key={asset.name} onClick={() => openUrl(asset.browser_download_url)} className="w-full py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition-colors shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 cursor-pointer">
+                              <Laptop className="w-5 h-5" /> Tải về cho Fedora/RHEL (.rpm)
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      
+                      <button onClick={() => openUrl(updateData.url)} className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                        <Globe className="w-5 h-5" /> {t("Mở trang Release trên GitHub", "Open Release on GitHub")}
+                      </button>
+                    </div>
+                    
+                    <button onClick={() => setShowUpdateModal(false)} className="text-gray-400 hover:text-white transition-colors text-sm cursor-pointer">
+                      {t("Để sau", "Maybe later")}
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
