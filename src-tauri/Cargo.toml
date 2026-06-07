@@ -1,6 +1,6 @@
 [package]
 name = "tich-phong-share"
-version = "2.0.0"
+version = "2.0.1"
 description = "Ứng dụng chia sẻ file nhanh chóng đa nền tảng cho TichPhongOS"
 authors = ["TichPhongOS Team"]
 edition = "2021"
