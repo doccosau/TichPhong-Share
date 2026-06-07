@@ -1874,7 +1874,7 @@ function App() {
                       <button onClick={() => setShowDonate(true)} className="bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-500/10">
                         <Heart className="w-4 h-4" /> {t("Ủng hộ Dự án", "Donate")}
                       </button>
-                      <button onClick={handleCheckUpdate} disabled={updateStatus === 'checking'} className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer flex items-center justify-center gap-2">
+                      <button onClick={() => handleCheckUpdate(false)} disabled={updateStatus === 'checking'} className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-xl transition-colors font-medium text-sm text-gray-300 cursor-pointer flex items-center justify-center gap-2">
                         <RefreshCw className={`w-4 h-4 ${updateStatus === 'checking' ? 'animate-spin' : ''}`} /> 
                         {updateStatus === 'checking' ? t("Đang kiểm tra...", "Checking...") : t("Kiểm tra cập nhật", "Check for Updates")}
                       </button>
