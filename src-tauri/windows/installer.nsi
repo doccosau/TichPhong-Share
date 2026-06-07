@@ -174,7 +174,7 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 ; Installer pages, must be ordered as they appear
 ; 1. Welcome Page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-!define MUI_WELCOMEPAGE_TEXT "Chào mừng bạn đến với trình cài đặt TichPhong Share v2.0!\r\n\r\nGiải pháp chia sẻ file đa nền tảng, mã nguồn mở, không giới hạn dung lượng do TichPhong OS phát triển.\r\n\r\nNhấn Next (Tiếp tục) để bắt đầu cài đặt."
+!define MUI_WELCOMEPAGE_TEXT "Chào mừng bạn đến với trình cài đặt TichPhong Share v2.0.1!$\r$\n$\r$\nGiải pháp chia sẻ file đa nền tảng, mã nguồn mở, không giới hạn dung lượng do TichPhong OS phát triển.$\r$\n$\r$\nNhấn Next (Tiếp tục) để bắt đầu cài đặt."
 !insertmacro MUI_PAGE_WELCOME
 
 ; 2. License Page (if defined)
