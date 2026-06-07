@@ -1201,7 +1201,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+
         .setup(|app| {
             let quit_i = MenuItem::with_id(app, "quit", "Thoát hoàn toàn", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Mở TichPhong Share", true, None::<&str>)?;
