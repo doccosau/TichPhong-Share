@@ -66,9 +66,13 @@ struct Device {
 }
 
 fn get_config_dir() -> PathBuf {
-    UserDirs::new()
-        .map(|u| u.home_dir().join(".config").join("tichphong-share"))
-        .unwrap_or_else(|| PathBuf::from("/tmp/tichphong-share"))
+    if let Some(proj_dirs) = directories::ProjectDirs::from("com", "TichPhong", "TichPhongShare") {
+        proj_dirs.config_dir().to_path_buf()
+    } else {
+        UserDirs::new()
+            .map(|u| u.home_dir().join(".config").join("tichphong-share"))
+            .unwrap_or_else(|| PathBuf::from("/tmp/tichphong-share"))
+    }
 }
 
 /// Generate or load TLS certificate for HTTPS server.
@@ -272,11 +276,11 @@ impl ShareSettings {
             })
             .unwrap_or_else(|| "/tmp/TichPhongShare".to_string());
 
-        let (_, _, cert_fingerprint) = generate_or_load_tls_cert();
+        let (_, _, actual_fingerprint) = generate_or_load_tls_cert();
 
         let default_settings = ShareSettings {
             alias: generate_random_alias(),
-            fingerprint: cert_fingerprint,
+            fingerprint: actual_fingerprint.clone(),
             download_dir: default_dir,
             theme: "light".to_string(),
             accent: "jade".to_string(),
@@ -288,35 +292,33 @@ impl ShareSettings {
             qrc_port: None,
         };
 
-        if let Some(config_dir) =
-            UserDirs::new().and_then(|u| Some(u.home_dir().join(".config").join("tichphong-share")))
-        {
-            let _ = fs::create_dir_all(&config_dir);
-            let config_file = config_dir.join("settings.json");
+        let config_dir = get_config_dir();
+        let _ = fs::create_dir_all(&config_dir);
+        let config_file = config_dir.join("settings.json");
 
-            if let Ok(data) = fs::read_to_string(&config_file) {
-                if let Ok(settings) = serde_json::from_str(&data) {
-                    return settings;
+        if let Ok(data) = fs::read_to_string(&config_file) {
+            if let Ok(mut settings) = serde_json::from_str::<ShareSettings>(&data) {
+                // Ensure fingerprint matches actual cert (fixes discovery issues)
+                if settings.fingerprint != actual_fingerprint {
+                    settings.fingerprint = actual_fingerprint;
                 }
-            } else {
-                let _ = fs::write(
-                    config_file,
-                    serde_json::to_string_pretty(&default_settings).unwrap(),
-                );
+                return settings;
             }
+        } else {
+            let _ = fs::write(
+                config_file,
+                serde_json::to_string_pretty(&default_settings).unwrap(),
+            );
         }
 
         default_settings
     }
 
     fn save(&self) {
-        if let Some(config_dir) =
-            UserDirs::new().and_then(|u| Some(u.home_dir().join(".config").join("tichphong-share")))
-        {
-            let _ = fs::create_dir_all(&config_dir);
-            let config_file = config_dir.join("settings.json");
-            let _ = fs::write(config_file, serde_json::to_string_pretty(self).unwrap());
-        }
+        let config_dir = get_config_dir();
+        let _ = fs::create_dir_all(&config_dir);
+        let config_file = config_dir.join("settings.json");
+        let _ = fs::write(config_file, serde_json::to_string_pretty(self).unwrap());
     }
 }
 
@@ -506,12 +508,12 @@ async fn reject_receive(
 async fn send_file(
     ip: String,
     port: Option<u16>,
-    protocol: Option<String>,
+    _protocol: Option<String>,
     file_paths: Vec<String>,
     state: tauri::State<'_, Arc<ShareState>>,
 ) -> Result<String, String> {
     let target_port = port.unwrap_or(53317);
-    let target_protocol = protocol.unwrap_or_else(|| "http".to_string());
+    let target_protocol = "https".to_string();
 
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
@@ -566,24 +568,12 @@ async fn send_file(
     let base_url = format!("{}://{}:{}", target_protocol, ip, target_port);
     let target_url = format!("{}/api/localsend/v2/prepare-upload", base_url);
 
-    // Try primary protocol, fallback to opposite for backward compatibility
-    let fallback_protocol = if target_protocol == "https" { "http" } else { "https" };
-    let fallback_base_url = format!("{}://{}:{}", fallback_protocol, ip, target_port);
-    let fallback_url = format!("{}/api/localsend/v2/prepare-upload", fallback_base_url);
-
-    let (res, base_url) = match client.post(&target_url).json(&prepare_req).send().await {
-        Ok(r) => (r, base_url),
-        Err(_) => {
-            // Primary failed, try opposite protocol (backward compat)
-            let r = client
-                .post(&fallback_url)
-                .json(&prepare_req)
-                .send()
-                .await
-                .map_err(|e| format!("Không thể kết nối đến thiết bị: {}", e))?;
-            (r, fallback_base_url)
-        }
-    };
+    let res = client
+        .post(&target_url)
+        .json(&prepare_req)
+        .send()
+        .await
+        .map_err(|e| format!("Không thể kết nối bằng HTTPS: {}", e))?;
 
     if !res.status().is_success() {
         if res.status() == 403 {
@@ -863,7 +853,29 @@ async fn upload_handler(
     }
 }
 
-async fn cancel_handler() -> StatusCode {
+#[derive(Deserialize)]
+#[allow(non_snake_case)]
+struct CancelQuery {
+    sessionId: String,
+}
+
+async fn cancel_handler(
+    AxumState(state): AxumState<Arc<ShareState>>,
+    Query(query): Query<CancelQuery>,
+) -> StatusCode {
+    let mut pending = state.pending_receives.lock().await;
+    if let Some(tx) = pending.remove(&query.sessionId) {
+        let _ = tx.send(false);
+    }
+
+    if let Some(flag) = state.active_receive_cancel.lock().unwrap().as_ref() {
+        flag.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    let _ = state.app_handle.emit("receive-canceled", serde_json::json!({
+        "sessionId": query.sessionId
+    }));
+
     StatusCode::OK
 }
 
@@ -1085,6 +1097,7 @@ fn start_udp_discovery(state: Arc<ShareState>) {
         let port: u16 = 53317;
 
         let listen_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port);
+        
         let socket = match UdpSocket::bind(listen_addr).await {
             Ok(s) => s,
             Err(e) => {
@@ -1092,7 +1105,17 @@ fn start_udp_discovery(state: Arc<ShareState>) {
                 return;
             }
         };
-        let _ = socket.join_multicast_v4(multicast_addr, Ipv4Addr::UNSPECIFIED);
+        
+        // Join multicast on the actual local network interface rather than UNSPECIFIED
+        // This avoids joining on docker0 or other virtual interfaces
+        let local_addr = local_ip().unwrap_or_else(|_| std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+        let iface = if let std::net::IpAddr::V4(v4) = local_addr {
+            v4
+        } else {
+            Ipv4Addr::UNSPECIFIED
+        };
+        
+        let _ = socket.join_multicast_v4(multicast_addr, iface);
         let _ = socket.set_broadcast(true);
 
         let socket = Arc::new(socket);
@@ -1161,6 +1184,7 @@ fn start_udp_discovery(state: Arc<ShareState>) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    rustls::crypto::ring::default_provider().install_default().ok();
     env_logger::init();
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())

@@ -515,6 +515,11 @@ function App() {
       });
     });
     
+    const unlistenReceiveCanceled = listen<{ sessionId: string }>("receive-canceled", (event) => {
+      setPendingReceives(prev => prev.filter(r => r.sessionId !== event.payload.sessionId));
+      triggerOSNotification("TichPhong Share", "Thiết bị gửi đã hủy bỏ yêu cầu chuyển file.");
+    });
+    
     return () => {
       unlistenMdns.then(f => f());
       unlistenReceiveReq.then(f => f());
@@ -526,6 +531,7 @@ function App() {
       unlistenDrop.then(f => f());
       unlistenQuickShare.then(f => f());
       unlistenNavigateTab.then(f => f());
+      unlistenReceiveCanceled.then(f => f());
     };
   }, []);
 

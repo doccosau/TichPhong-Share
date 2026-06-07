@@ -28,7 +28,16 @@
     "active": true,
     "windows": {
       "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/installer-header.bmp",
+        "sidebarImage": "icons/installer-sidebar.bmp",
+        "installMode": "perMachine",
+        "displayLanguageSelector": true,
         "installerHooks": "windows/hooks.nsh"
+      },
+      "wix": {
+        "bannerPath": "icons/wix-banner.bmp",
+        "dialogImagePath": "icons/wix-dialog.bmp"
       }
     },
     "targets": ["deb", "rpm", "nsis", "msi"],
