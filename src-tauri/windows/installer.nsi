@@ -19,10 +19,10 @@ ManifestDPIAwareness PerMonitorV2
 !addplugindir "{{signed_plugins_path}}"
 {{/if}}
 
-; Custom UI colors for TichPhong Share
-!define MUI_BGCOLOR "1A1A1A"
-!define MUI_TEXTCOLOR "FFFFFF"
-!define MUI_INSTFILESPAGE_COLORS "FFFFFF 1A1A1A"
+; Custom UI colors for TichPhong Share (Light Jade)
+!define MUI_BGCOLOR "ECFDF5"
+!define MUI_TEXTCOLOR "047857"
+!define MUI_INSTFILESPAGE_COLORS "047857 ECFDF5"
 !define MUI_WELCOMEPAGE_TITLE_3LINES
 !define MUI_FINISHPAGE_TITLE_3LINES
 
