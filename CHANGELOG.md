@@ -2,6 +2,17 @@
 
 Tất cả các thay đổi nổi bật của TichPhong Share sẽ được ghi lại trong tệp này. Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.1] - 2026-06-07
+
+### ✨ Tính năng mới & Cải tiến
+- **Thông báo cập nhật thông minh**: Ứng dụng tự động chạy ngầm kiểm tra phiên bản mới từ GitHub Release và gửi thông báo hệ thống (Notification) nếu có bản cập nhật mới.
+- **Tự động nhận diện nền tảng**: Cửa sổ cập nhật tự động đưa ra link tải phù hợp với hệ điều hành đang sử dụng (Windows `.exe`/`.msi` hoặc Linux `.deb`/`.rpm`).
+- **Nâng cấp giao diện QR Connect**: Thêm hiển thị địa chỉ liên kết trực tiếp ở chế độ phát Hotspot, giúp người dùng dễ dàng copy và chia sẻ link mà không cần quét mã QR.
+
+### 🔧 Khắc phục lỗi & Tối ưu (Bug Fixes)
+- Khắc phục các sự cố tương thích và tối ưu hóa kết nối đối với giao thức **LocalSend**.
+- Loại bỏ hoàn toàn cơ chế `tauri-plugin-updater` giúp tối ưu dung lượng, tăng độ ổn định và loại bỏ quá trình xác thực chữ ký số rườm rà.
+
 ## [2.0.0] - 2026-06-06
 
 ### ✨ Tính năng mới (New Features)
