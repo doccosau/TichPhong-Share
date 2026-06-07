@@ -1099,18 +1099,16 @@ function App() {
                                 <p className={`mt-3 text-sm font-semibold ${qrcWifiQr ? 'text-green-400' : 'text-white'}`}>
                                   {qrcWifiQr ? `2. ${t("Mở Web App", "Open Web App")}` : t("Quét để mở Web", "Scan to open Web")}
                                 </p>
-                                {!qrcWifiQr && (
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <code className="text-xs text-gray-500 break-all text-center max-w-[160px]">{qrcUrl}</code>
-                                    <button 
-                                      onClick={() => navigator.clipboard.writeText(qrcUrl).then(() => showToast(t("Đã copy link!", "Link copied!"), 'success'))}
-                                      className="text-gray-400 hover:text-white"
-                                      title="Copy Link"
-                                    >
-                                      <Copy className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <code className="text-xs text-gray-500 break-all text-center max-w-[160px]">{qrcUrl}</code>
+                                  <button 
+                                    onClick={() => navigator.clipboard.writeText(qrcUrl).then(() => showToast(t("Đã copy link!", "Link copied!"), 'success'))}
+                                    className="text-gray-400 hover:text-white"
+                                    title="Copy Link"
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </div>
                             </motion.div>
                           ) : (
