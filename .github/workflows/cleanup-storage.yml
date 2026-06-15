@@ -1,0 +1,37 @@
+name: Cleanup GitHub Storage
+
+on:
+  workflow_dispatch: # Cho phép kích hoạt thủ công từ tab Actions
+  schedule:
+    - cron: '0 0 * * 0' # Chạy tự động mỗi Chủ Nhật
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete old artifacts
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: |
+            *
+          failOnError: false
+
+      - name: Clear GitHub Actions Cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fetching list of caches..."
+          cacheKeysForPR=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/${{ github.repository }}/actions/caches | jq -r '.actions_caches[].key')
+
+          set +e
+          for cacheKey in $cacheKeysForPR; do
+            echo "Deleting cache: $cacheKey"
+            gh api --method DELETE -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/${{ github.repository }}/actions/caches?key=$cacheKey
+          done
+          echo "Cleanup complete."
