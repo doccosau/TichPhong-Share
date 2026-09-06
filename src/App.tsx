@@ -1569,15 +1569,25 @@ function App() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Left Column: Directory Configuration & Stats */}
                   <div className="md:col-span-2 flex flex-col gap-6">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4">
+                    <div
+                      style={{
+                        backgroundColor: "var(--tp-surface, #303030)",
+                        border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.1))",
+                      }}
+                      className="rounded-2xl p-6 flex flex-col gap-4 shadow-sm"
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="bg-emerald-500/20 p-2.5 rounded-xl text-emerald-400">
+                          <div className="bg-emerald-500/20 p-2.5 rounded-xl text-emerald-500 dark:text-emerald-400">
                             <FolderOpen className="w-5 h-5" />
                           </div>
                           <div>
-                            <h2 className="font-semibold text-lg">{t("Thư Mục Kho Nhạc PC", "PC Music Library Folder")}</h2>
-                            <p className="text-xs text-gray-400">{t("Chọn thư mục chứa các bài hát (FLAC, WAV, DSD, TPUS, MP3...)", "Select folder containing audio files (FLAC, WAV, DSD, TPUS, MP3...)")}</p>
+                            <h2 className="font-semibold text-lg" style={{ color: "var(--tp-text, #ffffff)" }}>
+                              {t("Thư Mục Kho Nhạc PC", "PC Music Library Folder")}
+                            </h2>
+                            <p className="text-xs" style={{ color: "var(--tp-text-muted, #9ca3af)" }}>
+                              {t("Chọn thư mục chứa các bài hát (FLAC, WAV, DSD, TPUS, MP3...)", "Select folder containing audio files (FLAC, WAV, DSD, TPUS, MP3...)")}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1588,22 +1598,32 @@ function App() {
                           readOnly
                           placeholder={t("Chưa chọn thư mục nhạc...", "No music folder selected...")}
                           value={mediaMusicDir}
-                          className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-gray-200 focus:outline-none"
+                          style={{
+                            backgroundColor: "var(--tp-bg, #242424)",
+                            color: "var(--tp-text, #ffffff)",
+                            border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.15))",
+                          }}
+                          className="flex-1 rounded-xl px-4 py-2.5 text-sm font-mono font-medium focus:outline-none select-all"
                         />
                         <button
                           onClick={handleSelectMusicDir}
                           disabled={mediaStatus?.is_running || isMediaLoading}
-                          className="bg-white/10 hover:bg-white/20 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+                          style={{
+                            backgroundColor: "var(--tp-bg, #242424)",
+                            color: "var(--tp-text, #ffffff)",
+                            border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.15))",
+                          }}
+                          className="hover:opacity-90 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
                         >
-                          <FolderOpen className="w-4 h-4 text-emerald-400" />
+                          <FolderOpen className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                           {t("Duyệt", "Browse")}
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                      <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--tp-border, rgba(255,255,255,0.05))" }}>
                         <div className="flex items-center gap-2">
                           <span className={`w-2.5 h-2.5 rounded-full ${mediaStatus?.is_running ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
-                          <span className="text-sm font-medium">
+                          <span className="text-sm font-medium" style={{ color: "var(--tp-text, #ffffff)" }}>
                             {mediaStatus?.is_running ? t("Máy chủ đang phát qua WiFi", "Server running over WiFi") : t("Máy chủ đang tắt", "Server offline")}
                           </span>
                         </div>
@@ -1613,7 +1633,7 @@ function App() {
                           disabled={isMediaLoading}
                           className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-lg ${
                             mediaStatus?.is_running
-                              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
+                              ? 'bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/30 border border-red-500/30'
                               : 'bg-emerald-500 hover:bg-emerald-600 text-black font-bold shadow-emerald-500/20'
                           }`}
                         >
@@ -1630,27 +1650,63 @@ function App() {
                     {/* Stats & Information */}
                     {mediaStatus?.is_running && (
                       <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
-                          <span className="text-xs text-gray-400 mb-1">{t("Tổng số bài hát", "Total Tracks")}</span>
-                          <span className="text-2xl font-bold font-mono text-white">{mediaStatus.total_tracks}</span>
+                        <div
+                          style={{
+                            backgroundColor: "var(--tp-surface, #303030)",
+                            border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.1))",
+                          }}
+                          className="rounded-xl p-4 flex flex-col shadow-sm"
+                        >
+                          <span className="text-xs font-medium mb-1" style={{ color: "var(--tp-text-muted, #9ca3af)" }}>
+                            {t("Tổng số bài hát", "Total Tracks")}
+                          </span>
+                          <span className="text-2xl font-bold font-mono" style={{ color: "var(--tp-text, #ffffff)" }}>
+                            {mediaStatus.total_tracks}
+                          </span>
                         </div>
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
-                          <span className="text-xs text-gray-400 mb-1">{t("Định dạng Lossless", "Lossless Tracks")}</span>
-                          <span className="text-2xl font-bold font-mono text-emerald-400">{mediaStatus.total_lossless}</span>
+                        <div
+                          style={{
+                            backgroundColor: "var(--tp-surface, #303030)",
+                            border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.1))",
+                          }}
+                          className="rounded-xl p-4 flex flex-col shadow-sm"
+                        >
+                          <span className="text-xs font-medium mb-1" style={{ color: "var(--tp-text-muted, #9ca3af)" }}>
+                            {t("Định dạng Lossless", "Lossless Tracks")}
+                          </span>
+                          <span className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                            {mediaStatus.total_lossless}
+                          </span>
                         </div>
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
-                          <span className="text-xs text-gray-400 mb-1">{t("Cổng phát (Port)", "Streaming Port")}</span>
-                          <span className="text-2xl font-bold font-mono text-cyan-400">{mediaStatus.port}</span>
+                        <div
+                          style={{
+                            backgroundColor: "var(--tp-surface, #303030)",
+                            border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.1))",
+                          }}
+                          className="rounded-xl p-4 flex flex-col shadow-sm"
+                        >
+                          <span className="text-xs font-medium mb-1" style={{ color: "var(--tp-text-muted, #9ca3af)" }}>
+                            {t("Cổng phát (Port)", "Streaming Port")}
+                          </span>
+                          <span className="text-2xl font-bold font-mono text-cyan-600 dark:text-cyan-400">
+                            {mediaStatus.port}
+                          </span>
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* Right Column: QR Code & Mobile Connection */}
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                  <div
+                    style={{
+                      backgroundColor: "var(--tp-surface, #303030)",
+                      border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.1))",
+                    }}
+                    className="rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-sm"
+                  >
                     {mediaStatus?.is_running ? (
                       <>
-                        <span className="text-xs uppercase tracking-widest text-emerald-400 font-bold mb-3 flex items-center gap-1.5">
+                        <span className="text-xs uppercase tracking-widest text-emerald-500 dark:text-emerald-400 font-bold mb-3 flex items-center gap-1.5">
                           <Wifi className="w-4 h-4" /> {t("Quét Mã Để Nghe", "Scan To Listen")}
                         </span>
                         <div
@@ -1670,19 +1726,26 @@ function App() {
                             level="M"
                           />
                         </div>
-                        <div className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 flex items-center justify-between gap-2 mb-3">
-                          <code className="text-xs text-emerald-300 font-mono truncate">{mediaStatus.connect_url}</code>
+                        <div
+                          style={{
+                            backgroundColor: "var(--tp-bg, #242424)",
+                            border: "1px solid var(--tp-border, rgba(255, 255, 255, 0.1))",
+                          }}
+                          className="w-full rounded-xl p-2.5 flex items-center justify-between gap-2 mb-3"
+                        >
+                          <code className="text-xs text-emerald-600 dark:text-emerald-300 font-mono font-medium truncate">{mediaStatus.connect_url}</code>
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(mediaStatus.connect_url);
                               showToast(t("Đã sao chép liên kết!", "Link copied!"), 'success');
                             }}
-                            className="text-gray-400 hover:text-white p-1"
+                            style={{ color: "var(--tp-text-muted, #9ca3af)" }}
+                            className="hover:opacity-80 p-1"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <p className="text-[11px] text-gray-400 leading-relaxed">
+                        <p className="text-[11px] leading-relaxed" style={{ color: "var(--tp-text-muted, #9ca3af)" }}>
                           {t("Mở Nhạc Quán Neo trên điện thoại → Vào Mini App Tàng Thư Mạng Cục → Quét mã này để nghe nhạc ngay lập tức.", "Open Nhac Quan Neo on phone → Open TichPhong Link Mini App → Scan this QR to start streaming immediately.")}
                         </p>
                       </>
