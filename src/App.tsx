@@ -1653,8 +1653,22 @@ function App() {
                         <span className="text-xs uppercase tracking-widest text-emerald-400 font-bold mb-3 flex items-center gap-1.5">
                           <Wifi className="w-4 h-4" /> {t("Quét Mã Để Nghe", "Scan To Listen")}
                         </span>
-                        <div className="bg-white p-3 rounded-2xl shadow-xl shadow-black/40 mb-4">
-                          <QRCode value={mediaStatus.connect_url} size={168} />
+                        <div
+                          style={{
+                            backgroundColor: "#ffffff",
+                            padding: "16px",
+                            borderRadius: "12px",
+                            display: "inline-block",
+                          }}
+                          className="mb-4"
+                        >
+                          <QRCode
+                            value={mediaStatus.connect_url}
+                            size={180}
+                            bgColor="#ffffff"
+                            fgColor="#000000"
+                            level="M"
+                          />
                         </div>
                         <div className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 flex items-center justify-between gap-2 mb-3">
                           <code className="text-xs text-emerald-300 font-mono truncate">{mediaStatus.connect_url}</code>
