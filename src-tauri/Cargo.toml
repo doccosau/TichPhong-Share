@@ -27,7 +27,7 @@ tokio = { version = "1.52.3", features = ["full"] }
 mdns-sd = "0.20.0"
 local-ip-address = "0.6.13"
 directories = "6.0.0"
-tower-http = { version = "0.6.11", features = ["cors"] }
+tower-http = { version = "0.6.11", features = ["cors", "fs"] }
 reqwest = { version = "0.12", features = ["rustls-tls", "json", "stream", "multipart"] }
 tauri-plugin-dialog = "2.0.0"
 uuid = { version = "1.23.2", features = ["v4"] }

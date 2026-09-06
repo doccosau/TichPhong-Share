@@ -22,7 +22,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isPermissionGranted, requestPermission, sendNotification, onAction } from '@tauri-apps/plugin-notification';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw, Zap, History } from "lucide-react";
+import { X, Smartphone, Laptop, Settings, Send, Download, Monitor, CheckCircle, XCircle, FileIcon, FolderOpen, FileText, QrCode, HardDrive, Globe, Link2, Copy, Power, Wifi, Info, BookOpen, Languages, Heart, RefreshCw, Zap, History, Disc3 } from "lucide-react";
 import QRCode from "react-qr-code";
 import "./App.css";
 
@@ -103,9 +103,23 @@ const getQSStateText = (state: string, isOutbound?: boolean) => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"send" | "receive" | "settings" | "portal" | "about" | "qrconnect">("send");
+  const [activeTab, setActiveTab] = useState<"send" | "receive" | "settings" | "portal" | "about" | "qrconnect" | "link">("send");
   const [devices, setDevices] = useState<Device[]>([]);
   const [localIp, setLocalIp] = useState("Đang tải...");
+
+  // TichPhong Link (Media Server) State
+  type MediaServerStatus = {
+    is_running: boolean;
+    music_dir?: string;
+    port: number;
+    local_ip: string;
+    connect_url: string;
+    total_tracks: number;
+    total_lossless: number;
+  };
+  const [mediaStatus, setMediaStatus] = useState<MediaServerStatus | null>(null);
+  const [mediaMusicDir, setMediaMusicDir] = useState<string>("");
+  const [isMediaLoading, setIsMediaLoading] = useState(false);
   
   // QuickShare State
   const [qsTransfer, setQsTransfer] = useState<QSChannelMessage | null>(null);
@@ -322,6 +336,14 @@ function App() {
         }
         
         setSettings(st);
+
+        // Fetch initial media server status
+        invoke<MediaServerStatus>("get_media_server_status")
+          .then((ms) => {
+            setMediaStatus(ms);
+            if (ms.music_dir) setMediaMusicDir(ms.music_dir);
+          })
+          .catch(() => {});
       } catch (e) {
         setLocalIp("127.0.0.1");
       }
@@ -636,7 +658,50 @@ function App() {
       console.error(e);
     }
   };
-  
+
+  const handleSelectMusicDir = async () => {
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const folder = await open({ directory: true, multiple: false, title: t('Chọn Thư Mục Nhạc', 'Select Music Folder') });
+      if (folder && typeof folder === 'string') {
+        setMediaMusicDir(folder);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(t("Lỗi chọn thư mục: ", "Error selecting folder: ") + err, 'error');
+    }
+  };
+
+  const handleToggleMediaServer = async () => {
+    if (!mediaStatus?.is_running) {
+      if (!mediaMusicDir) {
+        showToast(t("Vui lòng chọn thư mục nhạc trước", "Please select a music folder first"), 'error');
+        return;
+      }
+      setIsMediaLoading(true);
+      try {
+        const res = await invoke<MediaServerStatus>("start_media_server", { dir: mediaMusicDir });
+        setMediaStatus(res);
+        showToast(t("Đã bật TichPhong Link thành công!", "TichPhong Link started successfully!"), 'success');
+      } catch (err) {
+        showToast(t("Lỗi bật máy chủ: ", "Error starting server: ") + err, 'error');
+      } finally {
+        setIsMediaLoading(false);
+      }
+    } else {
+      setIsMediaLoading(true);
+      try {
+        await invoke("stop_media_server");
+        setMediaStatus(prev => prev ? { ...prev, is_running: false } : null);
+        showToast(t("Đã dừng TichPhong Link", "TichPhong Link stopped"), 'success');
+      } catch (err) {
+        showToast(t("Lỗi dừng máy chủ: ", "Error stopping server: ") + err, 'error');
+      } finally {
+        setIsMediaLoading(false);
+      }
+    }
+  };
+
   const handleSendToDevice = async (device: Device) => {
     if (selectedFiles.length === 0) return;
     
@@ -817,6 +882,15 @@ function App() {
           >
             <Globe className="w-5 h-5 shrink-0" />
             <span className="font-medium hidden md:block truncate">Device Portal</span>
+          </button>
+
+          <button 
+            onClick={() => setActiveTab("link")}
+            className={`flex items-center justify-center md:justify-start gap-3 p-3 md:px-4 md:py-3 rounded-xl transition-all relative ${activeTab === 'link' ? 'bg-tichphong-blue text-[#ffffff] shadow-lg shadow-tichphong-blue/20' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+          >
+            <Disc3 className="w-5 h-5 shrink-0" />
+            <span className="font-medium hidden md:block truncate">TichPhong Link</span>
+            {mediaStatus?.is_running && <span className="absolute top-2 right-2 md:relative md:top-auto md:right-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>}
           </button>
           
           <button 
@@ -1476,6 +1550,136 @@ function App() {
                   </div>
 
 
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "link" && (
+              <motion.div key="link" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col min-h-full gap-8 max-w-4xl mx-auto w-full">
+                <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center border border-white/10 text-emerald-400">
+                    <Disc3 className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-emerald-400 via-teal-300 to-white bg-clip-text text-transparent">TichPhong Link</h1>
+                    <p className="text-gray-400 text-sm">{t("Cầu nối chia sẻ kho nhạc Lossless tới ứng dụng Nhạc Quán Neo (Android) qua WiFi", "Lossless audio streaming bridge to Nhac Quan Neo (Android) over WiFi")}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Left Column: Directory Configuration & Stats */}
+                  <div className="md:col-span-2 flex flex-col gap-6">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-emerald-500/20 p-2.5 rounded-xl text-emerald-400">
+                            <FolderOpen className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h2 className="font-semibold text-lg">{t("Thư Mục Kho Nhạc PC", "PC Music Library Folder")}</h2>
+                            <p className="text-xs text-gray-400">{t("Chọn thư mục chứa các bài hát (FLAC, WAV, DSD, TPUS, MP3...)", "Select folder containing audio files (FLAC, WAV, DSD, TPUS, MP3...)")}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          placeholder={t("Chưa chọn thư mục nhạc...", "No music folder selected...")}
+                          value={mediaMusicDir}
+                          className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-gray-200 focus:outline-none"
+                        />
+                        <button
+                          onClick={handleSelectMusicDir}
+                          disabled={mediaStatus?.is_running || isMediaLoading}
+                          className="bg-white/10 hover:bg-white/20 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <FolderOpen className="w-4 h-4 text-emerald-400" />
+                          {t("Duyệt", "Browse")}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${mediaStatus?.is_running ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+                          <span className="text-sm font-medium">
+                            {mediaStatus?.is_running ? t("Máy chủ đang phát qua WiFi", "Server running over WiFi") : t("Máy chủ đang tắt", "Server offline")}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={handleToggleMediaServer}
+                          disabled={isMediaLoading}
+                          className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-lg ${
+                            mediaStatus?.is_running
+                              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
+                              : 'bg-emerald-500 hover:bg-emerald-600 text-black font-bold shadow-emerald-500/20'
+                          }`}
+                        >
+                          <Power className="w-4 h-4" />
+                          {isMediaLoading
+                            ? t("Đang xử lý...", "Processing...")
+                            : mediaStatus?.is_running
+                            ? t("Dừng Phát Nhạc", "Stop Streaming")
+                            : t("Bật TichPhong Link", "Start TichPhong Link")}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stats & Information */}
+                    {mediaStatus?.is_running && (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
+                          <span className="text-xs text-gray-400 mb-1">{t("Tổng số bài hát", "Total Tracks")}</span>
+                          <span className="text-2xl font-bold font-mono text-white">{mediaStatus.total_tracks}</span>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
+                          <span className="text-xs text-gray-400 mb-1">{t("Định dạng Lossless", "Lossless Tracks")}</span>
+                          <span className="text-2xl font-bold font-mono text-emerald-400">{mediaStatus.total_lossless}</span>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
+                          <span className="text-xs text-gray-400 mb-1">{t("Cổng phát (Port)", "Streaming Port")}</span>
+                          <span className="text-2xl font-bold font-mono text-cyan-400">{mediaStatus.port}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column: QR Code & Mobile Connection */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                    {mediaStatus?.is_running ? (
+                      <>
+                        <span className="text-xs uppercase tracking-widest text-emerald-400 font-bold mb-3 flex items-center gap-1.5">
+                          <Wifi className="w-4 h-4" /> {t("Quét Mã Để Nghe", "Scan To Listen")}
+                        </span>
+                        <div className="bg-white p-3 rounded-2xl shadow-xl shadow-black/40 mb-4">
+                          <QRCode value={mediaStatus.connect_url} size={168} />
+                        </div>
+                        <div className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 flex items-center justify-between gap-2 mb-3">
+                          <code className="text-xs text-emerald-300 font-mono truncate">{mediaStatus.connect_url}</code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(mediaStatus.connect_url);
+                              showToast(t("Đã sao chép liên kết!", "Link copied!"), 'success');
+                            }}
+                            className="text-gray-400 hover:text-white p-1"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-gray-400 leading-relaxed">
+                          {t("Mở Nhạc Quán Neo trên điện thoại → Vào Mini App Tàng Thư Mạng Cục → Quét mã này để nghe nhạc ngay lập tức.", "Open Nhac Quan Neo on phone → Open TichPhong Link Mini App → Scan this QR to start streaming immediately.")}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="py-12 flex flex-col items-center text-gray-400">
+                        <Disc3 className="w-16 h-16 text-gray-600 mb-3" />
+                        <h3 className="font-semibold text-white mb-1">{t("Chưa bật máy chủ", "Server is Offline")}</h3>
+                        <p className="text-xs max-w-xs">{t("Chọn thư mục nhạc bên trái và bấm 'Bật TichPhong Link' để tạo mã kết nối cho điện thoại.", "Select a music folder on the left and click 'Start TichPhong Link' to generate connection code.")}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}

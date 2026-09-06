@@ -16,6 +16,7 @@
  */
 
 mod qrc;
+mod media_server;
 
 use axum::{
     body::Body,
@@ -265,6 +266,8 @@ pub struct ShareSettings {
     pub qs_enabled: Option<bool>,
     pub qrc_enabled: Option<bool>,
     pub qrc_port: Option<u16>,
+    pub music_dir: Option<String>,
+    pub media_port: Option<u16>,
 }
 
 impl ShareSettings {
@@ -290,6 +293,8 @@ impl ShareSettings {
             qs_enabled: Some(true),
             qrc_enabled: Some(true),
             qrc_port: None,
+            music_dir: None,
+            media_port: None,
         };
 
         let config_dir = get_config_dir();
@@ -333,6 +338,8 @@ struct ShareState {
     rqs_send_channel: AsyncMutex<Option<tokio::sync::mpsc::Sender<rqs_lib::SendInfo>>>,
     webdav_cancel: AsyncMutex<Option<tokio::sync::oneshot::Sender<()>>>,
     qrc_state: AsyncMutex<Option<Arc<qrc::QrcState>>>,
+    media_cancel: AsyncMutex<Option<tokio::sync::oneshot::Sender<()>>>,
+    media_status: AsyncMutex<media_server::MediaServerStatus>,
 }
 
 #[tauri::command]
@@ -441,6 +448,103 @@ async fn stop_webdav(state: tauri::State<'_, Arc<ShareState>>) -> Result<(), Str
         let _ = tx.send(());
     }
     Ok(())
+}
+
+#[tauri::command]
+async fn start_media_server(
+    dir: String,
+    port: Option<u16>,
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<media_server::MediaServerStatus, String> {
+    let mut cancel_guard = state.media_cancel.lock().await;
+    if cancel_guard.is_some() {
+        return Ok(state.media_status.lock().await.clone());
+    }
+
+    let music_path = PathBuf::from(&dir);
+    if !music_path.exists() || !music_path.is_dir() {
+        return Err("Thư mục nhạc không tồn tại hoặc không hợp lệ".to_string());
+    }
+
+    let selected_port = port.unwrap_or(media_server::DEFAULT_MEDIA_PORT);
+    let ip = get_local_ip();
+
+    let server_state = Arc::new(media_server::MediaServerState {
+        music_dir: music_path.clone(),
+        port: selected_port,
+        local_ip: ip.clone(),
+    });
+
+    let app = media_server::create_media_router(server_state);
+    let (tx, rx) = oneshot::channel::<()>();
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], selected_port));
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .map_err(|e| format!("Không thể mở cổng {}: {}", selected_port, e))?;
+
+    tauri::async_runtime::spawn(async move {
+        axum::serve(listener, app.into_make_service())
+            .with_graceful_shutdown(async {
+                let _ = rx.await;
+            })
+            .await
+            .ok();
+    });
+
+    *cancel_guard = Some(tx);
+
+    let server_base_url = format!("http://{}:{}", ip, selected_port);
+    let (all_tracks, lossless_count) =
+        media_server::scan_all_recursive(&music_path, &server_base_url, 5000);
+
+    let status = media_server::MediaServerStatus {
+        is_running: true,
+        music_dir: Some(dir.clone()),
+        port: selected_port,
+        local_ip: ip.clone(),
+        connect_url: server_base_url,
+        total_tracks: all_tracks.len(),
+        total_lossless: lossless_count,
+    };
+
+    let mut status_guard = state.media_status.lock().await;
+    *status_guard = status.clone();
+
+    // Save to settings
+    {
+        let mut settings = state.settings.lock().unwrap();
+        settings.music_dir = Some(dir);
+        settings.media_port = Some(selected_port);
+        settings.save();
+    }
+
+    Ok(status)
+}
+
+#[tauri::command]
+async fn stop_media_server(
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<(), String> {
+    let mut cancel_guard = state.media_cancel.lock().await;
+    if let Some(tx) = cancel_guard.take() {
+        let _ = tx.send(());
+    }
+    let mut status_guard = state.media_status.lock().await;
+    status_guard.is_running = false;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_media_server_status(
+    state: tauri::State<'_, Arc<ShareState>>,
+) -> Result<media_server::MediaServerStatus, String> {
+    let mut status = state.media_status.lock().await.clone();
+    status.local_ip = get_local_ip();
+    if status.is_running {
+        status.connect_url = format!("http://{}:{}", status.local_ip, status.port);
+    }
+    Ok(status)
 }
 
 #[tauri::command]
@@ -1289,13 +1393,23 @@ pub fn run() {
                 app_handle: app.handle().clone(),
                 pending_receives: AsyncMutex::new(HashMap::new()),
                 active_sessions: AsyncMutex::new(HashMap::new()),
-                settings: std::sync::Mutex::new(settings),
                 active_send_cancel: std::sync::Mutex::new(None),
                 active_receive_cancel: std::sync::Mutex::new(None),
                 rqs_sender: rqs_tx.clone(),
                 rqs_send_channel: AsyncMutex::new(None),
                 webdav_cancel: AsyncMutex::new(None),
                 qrc_state: AsyncMutex::new(None),
+                media_cancel: AsyncMutex::new(None),
+                media_status: AsyncMutex::new(media_server::MediaServerStatus {
+                    is_running: false,
+                    music_dir: settings.music_dir.clone(),
+                    port: settings.media_port.unwrap_or(media_server::DEFAULT_MEDIA_PORT),
+                    local_ip: get_local_ip(),
+                    connect_url: String::new(),
+                    total_tracks: 0,
+                    total_lossless: 0,
+                }),
+                settings: std::sync::Mutex::new(settings),
             });
 
             app.manage(share_state.clone());
@@ -1391,7 +1505,10 @@ pub fn run() {
             qrc_share_files,
             qrc_accept_upload,
             qrc_reject_upload,
-            qrc_update_theme
+            qrc_update_theme,
+            start_media_server,
+            stop_media_server,
+            get_media_server_status
         ])
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {

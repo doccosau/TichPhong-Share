@@ -1,9 +1,9 @@
 name: Cleanup GitHub Storage
 
 on:
-  workflow_dispatch: # Cho phép kích hoạt thủ công từ tab Actions
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 0' # Chạy tự động mỗi Chủ Nhật
+    - cron: '0 0 * * 0'
 
 jobs:
   cleanup:
